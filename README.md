@@ -6,11 +6,12 @@
 
 [**→ Install from VS Code Marketplace**](https://marketplace.visualstudio.com/items?itemName=c3n9.crafthub)
 
-Сommunity solutions
+## Сommunity solutions
 
 [**Web version from tonyswity with a focus on class generation**](https://tonyswity.github.io/JSONparser/)
 
-Features
+##Features
+
 1. **Class Upload and Creation**
    - CraftHub allows you to upload pre-existing programming language classes or create new ones with ease.
    - The intuitive interface ensures a seamless experience, making it accessible for users of all skill levels.

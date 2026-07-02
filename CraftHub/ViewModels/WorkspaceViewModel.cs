@@ -599,7 +599,8 @@ public partial class WorkspaceViewModel : ViewModelBase
         }
 
         var json = await File.ReadAllTextAsync(path);
-
+        json = _jsonService.SanitizeJson(json);
+        
         if (Properties.Count == 0)
         {
             var detectedFields = _jsonService.DetectFields(json);

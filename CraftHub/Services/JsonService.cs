@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using CraftHub.Core;
@@ -291,5 +292,75 @@ public class JsonService : IJsonService
             default:
                 return val;
         }
+    }
+    
+    public string SanitizeJson(string json) => SanitizeRawNewlinesInStrings(json);
+
+    /// <summary>
+    /// Scans raw JSON text char by char, tracking whether we're inside a string
+    /// literal (respecting existing backslash escapes), and escapes any literal
+    /// CR/LF/Tab found there. This fixes files exported with unescaped newlines
+    /// inside "Content" fields, which JsonDocument.Parse would otherwise reject.
+    /// </summary>
+    private static string SanitizeRawNewlinesInStrings(string json)
+    {
+        var sb = new StringBuilder(json.Length + 64);
+        bool inString = false;
+        bool escaped = false;
+
+        for (int i = 0; i < json.Length; i++)
+        {
+            char c = json[i];
+
+            if (inString)
+            {
+                if (escaped)
+                {
+                    sb.Append(c);
+                    escaped = false;
+                    continue;
+                }
+
+                if (c == '\\')
+                {
+                    sb.Append(c);
+                    escaped = true;
+                    continue;
+                }
+
+                if (c == '"')
+                {
+                    inString = false;
+                    sb.Append(c);
+                    continue;
+                }
+
+                if (c == '\n')
+                {
+                    sb.Append("\\n");
+                    continue;
+                }
+                if (c == '\r')
+                {
+                    if (i + 1 >= json.Length || json[i + 1] != '\n')
+                        sb.Append("\\n");
+                    continue;
+                }
+                if (c == '\t')
+                {
+                    sb.Append("\\t");
+                    continue;
+                }
+
+                sb.Append(c);
+            }
+            else
+            {
+                if (c == '"') inString = true;
+                sb.Append(c);
+            }
+        }
+
+        return sb.ToString();
     }
 }

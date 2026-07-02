@@ -118,10 +118,11 @@ public partial class WorkspaceViewModel : ViewModelBase
 
     /// <summary>Dynamic tooltip: "Undo: Add row" or just "Undo" when stack is empty.</summary>
     [ObservableProperty] public string _undoTooltip;
+
     /// <summary>Dynamic tooltip: "Redo: Add row" or just "Redo" when stack is empty.</summary>
     [ObservableProperty] public string _redoTooltip;
-    
-    
+
+
     [RelayCommand(CanExecute = nameof(CanUndo))]
     private void Undo() => UndoRedo.Undo();
 
@@ -172,6 +173,7 @@ public partial class WorkspaceViewModel : ViewModelBase
                     ? $"{Localizer.Get("UndoTip")}: {d}"
                     : Localizer.Get("UndoTip");
             }
+
             if (e.PropertyName is nameof(UndoRedoService.CanRedo) or null)
             {
                 RedoCommand.NotifyCanExecuteChanged();
@@ -179,6 +181,7 @@ public partial class WorkspaceViewModel : ViewModelBase
                     ? $"{Localizer.Get("RedoTip")}: {d}"
                     : Localizer.Get("RedoTip");
             }
+
             if (e.PropertyName == nameof(UndoRedoService.UndoDescription))
                 UndoTooltip = UndoRedo.UndoDescription is { } d
                     ? $"{Localizer.Get("UndoTip")}: {d}"
@@ -212,6 +215,7 @@ public partial class WorkspaceViewModel : ViewModelBase
         {
             _dataSizeKb = "? KB";
         }
+
         OnPropertyChanged(nameof(DataSizeKb));
     }
 
@@ -359,7 +363,7 @@ public partial class WorkspaceViewModel : ViewModelBase
         int insertIdx = Rows.IndexOf(insertAfter) + 1;
 
         var duplicated = source
-            .OrderBy(r => Rows.IndexOf(r))   // preserve original order
+            .OrderBy(r => Rows.IndexOf(r)) // preserve original order
             .Select(CreateDuplicateRow)
             .ToList();
 
@@ -444,10 +448,13 @@ public partial class WorkspaceViewModel : ViewModelBase
                         merged.Add(new JsonPropertyDefinition { Name = f.FieldName, FieldType = f.SelectedType });
                 }
             }
-            catch { }
+            catch
+            {
+            }
         }
 
-        var newValue = await _dialogService.ShowJsonEditorDialogAsync($"Edit {propertyName}", currentValue, type, _jsonService,
+        var newValue = await _dialogService.ShowJsonEditorDialogAsync($"Edit {propertyName}", currentValue, type,
+            _jsonService,
             merged.Count > 0 ? merged : null);
 
         if (newValue == null || newValue == currentValue) return;
@@ -480,7 +487,7 @@ public partial class WorkspaceViewModel : ViewModelBase
             : _jsonService.SerializeToJson(selectedRows, Properties);
 
         await _dialogService.CopyToClipboardAsync(json);
-        HasClipboardContent = true;   // enable Paste immediately, no context-menu refresh needed
+        HasClipboardContent = true; // enable Paste immediately, no context-menu refresh needed
         NotifySuccess(Localizer.Get("RowsCopiedMsg", selectedRows.Count));
     }
 
@@ -494,6 +501,7 @@ public partial class WorkspaceViewModel : ViewModelBase
         {
             Rows.Add(row);
         }
+
         if (pasteData == null || pasteData.Count <= 0)
         {
             NotifyError(Localizer.Get("RowsPasteErrorMsg", pasteData.Count));
@@ -521,7 +529,7 @@ public partial class WorkspaceViewModel : ViewModelBase
             : _jsonService.SerializeToJson(selectedRows, Properties);
 
         await _dialogService.CopyToClipboardAsync(json);
-        HasClipboardContent = true;   // enable Paste immediately
+        HasClipboardContent = true; // enable Paste immediately
 
         foreach (var row in selectedRows)
             Rows.Remove(row);
@@ -579,6 +587,7 @@ public partial class WorkspaceViewModel : ViewModelBase
                 NotifyError(Localizer.Get("TabLimitReachedMsg", 15));
                 break;
             }
+
             await newVm.ImportFromPathAsync(paths[i]);
         }
     }
@@ -590,85 +599,99 @@ public partial class WorkspaceViewModel : ViewModelBase
     /// </summary>
     public async Task<bool> ImportFromPathAsync(string path)
     {
-        if (Properties.Count > 0 || Rows.Count > 0)
+        try
         {
-            var confirmed = await _dialogService.ShowConfirmAsync(
-                Localizer.Get("ImportOverwriteTitle"),
-                Localizer.Get("ImportOverwriteMsg"));
-            if (!confirmed) return false;
-        }
-
-        var json = await File.ReadAllTextAsync(path);
-        json = _jsonService.SanitizeJson(json);
-        
-        if (Properties.Count == 0)
-        {
-            var detectedFields = _jsonService.DetectFields(json);
-            if (detectedFields.Count == 0)
+            if (Properties.Count > 0 || Rows.Count > 0)
             {
-                await _dialogService.ShowMessageAsync(Localizer.Get("ImportTitle"), Localizer.Get("NoFieldsDetectedMsg"));
-                return false;
+                var confirmed = await _dialogService.ShowConfirmAsync(
+                    Localizer.Get("ImportOverwriteTitle"),
+                    Localizer.Get("ImportOverwriteMsg"));
+                if (!confirmed) return false;
             }
 
-            // Loop until the user either cancels or picks compatible types for every field.
-            // JsonFieldMapping items are shared references so SelectedType changes made inside
-            // the dialog are preserved when we reopen it after showing an error.
-            List<JsonFieldMapping>? mappedFields;
-            while (true)
-            {
-                mappedFields = await _dialogService.ShowFieldMappingDialogAsync(detectedFields, Path.GetFileName(path));
-                if (mappedFields == null) return false;
+            var json = await File.ReadAllTextAsync(path);
+            json = _jsonService.SanitizeJson(json);
 
-                // Validate that Array/Object fields actually contain valid JSON of the correct kind.
-                // Numbers, booleans and plain strings are valid JSON but cannot be opened in the
-                // nested editor, which expects '[' or '{' as the first character.
-                var typeErrors = new List<string>();
-                foreach (var field in mappedFields)
+            if (Properties.Count == 0)
+            {
+                var detectedFields = _jsonService.DetectFields(json);
+                if (detectedFields.Count == 0)
                 {
-                    if (field.SelectedType is JsonFieldType.Object or JsonFieldType.Array
-                        && !string.IsNullOrEmpty(field.SampleValue))
-                    {
-                        var typeName = field.SelectedType == JsonFieldType.Array ? "Array" : "Object";
-                        var expectedKind = field.SelectedType == JsonFieldType.Array
-                            ? JsonValueKind.Array
-                            : JsonValueKind.Object;
-                        try
-                        {
-                            using var doc = JsonDocument.Parse(field.SampleValue);
-                            if (doc.RootElement.ValueKind != expectedKind)
-                                typeErrors.Add($"  • '{field.FieldName}': \"{field.SampleValue}\" → не {typeName}");
-                        }
-                        catch (JsonException)
-                        {
-                            typeErrors.Add($"  • '{field.FieldName}': \"{field.SampleValue}\" → не {typeName}");
-                        }
-                    }
+                    await _dialogService.ShowMessageAsync(Localizer.Get("ImportTitle"),
+                        Localizer.Get("NoFieldsDetectedMsg"));
+                    return false;
                 }
 
-                if (typeErrors.Count == 0) break;   // all good, proceed
+                // Loop until the user either cancels or picks compatible types for every field.
+                // JsonFieldMapping items are shared references so SelectedType changes made inside
+                // the dialog are preserved when we reopen it after showing an error.
+                List<JsonFieldMapping>? mappedFields;
+                while (true)
+                {
+                    mappedFields =
+                        await _dialogService.ShowFieldMappingDialogAsync(detectedFields, Path.GetFileName(path));
+                    if (mappedFields == null) return false;
 
-                // Show error and reopen the dialog so the user can fix the types.
-                var msg = Localizer.Get("ImportTypeMismatchMsg") + "\n\n" + string.Join("\n", typeErrors);
-                await _dialogService.ShowMessageAsync(Localizer.Get("ImportTitle"), msg);
+                    // Validate that Array/Object fields actually contain valid JSON of the correct kind.
+                    // Numbers, booleans and plain strings are valid JSON but cannot be opened in the
+                    // nested editor, which expects '[' or '{' as the first character.
+                    var typeErrors = new List<string>();
+                    foreach (var field in mappedFields)
+                    {
+                        if (field.SelectedType is JsonFieldType.Object or JsonFieldType.Array
+                            && !string.IsNullOrEmpty(field.SampleValue))
+                        {
+                            var typeName = field.SelectedType == JsonFieldType.Array ? "Array" : "Object";
+                            var expectedKind = field.SelectedType == JsonFieldType.Array
+                                ? JsonValueKind.Array
+                                : JsonValueKind.Object;
+                            try
+                            {
+                                using var doc = JsonDocument.Parse(field.SampleValue);
+                                if (doc.RootElement.ValueKind != expectedKind)
+                                    typeErrors.Add($"  • '{field.FieldName}': \"{field.SampleValue}\" → не {typeName}");
+                            }
+                            catch (JsonException)
+                            {
+                                typeErrors.Add($"  • '{field.FieldName}': \"{field.SampleValue}\" → не {typeName}");
+                            }
+                        }
+                    }
+
+                    if (typeErrors.Count == 0) break; // all good, proceed
+
+                    // Show error and reopen the dialog so the user can fix the types.
+                    var msg = Localizer.Get("ImportTypeMismatchMsg") + "\n\n" + string.Join("\n", typeErrors);
+                    await _dialogService.ShowMessageAsync(Localizer.Get("ImportTitle"), msg);
+                }
+
+                Properties.AddRange(mappedFields.Select(f =>
+                    new JsonPropertyDefinition { Name = f.FieldName, FieldType = f.SelectedType }));
             }
 
-            Properties.AddRange(mappedFields.Select(f =>
-                new JsonPropertyDefinition { Name = f.FieldName, FieldType = f.SelectedType }));
+            var rows = _jsonService.ParseJsonData(json, Properties);
+            Rows.Clear();
+            Rows.AddRange(rows);
+
+            Header = Path.GetFileNameWithoutExtension(path);
+            UndoRedo.Clear(); // destructive — clear history
+            NotifySuccess(Localizer.Get("ImportedMsg", Rows.Count, Properties.Count));
+            FireColumnsChanged();
+
+            if (IsJsonEditorMode)
+                RawJsonText = _jsonService.SerializeToJson(Rows, Properties);
+
+            return true;
         }
-
-        var rows = _jsonService.ParseJsonData(json, Properties);
-        Rows.Clear();
-        Rows.AddRange(rows);
-
-        Header = Path.GetFileNameWithoutExtension(path);
-        UndoRedo.Clear();   // destructive — clear history
-        NotifySuccess(Localizer.Get("ImportedMsg", Rows.Count, Properties.Count));
-        FireColumnsChanged();
-
-        if (IsJsonEditorMode)
-            RawJsonText = _jsonService.SerializeToJson(Rows, Properties);
-
-        return true;
+        catch (JsonException ex)
+        {
+            var location = ex.LineNumber.HasValue
+                ? $" (строка {ex.LineNumber + 1}, позиция {ex.BytePositionInLine + 1})"
+                : "";
+            var msg = $"{Localizer.Get("InvalidJsonMsg")}{location}\n\n{ex.Message}";
+            await _dialogService.ShowMessageAsync(Localizer.Get("ImportTitle"), msg);
+            return false;
+        }
     }
 
     [RelayCommand]
@@ -706,6 +729,7 @@ public partial class WorkspaceViewModel : ViewModelBase
                 NotifyError(Localizer.Get("TabLimitReachedMsg", 15));
                 break;
             }
+
             await newVm.ImportClassFromPathAsync(paths[i]);
         }
     }
@@ -768,7 +792,7 @@ public partial class WorkspaceViewModel : ViewModelBase
 
         Rows.Clear();
         Header = className;
-        UndoRedo.Clear();   // destructive — clear history
+        UndoRedo.Clear(); // destructive — clear history
         NotifySuccess(Localizer.Get("ImportedClassMsg", className, Properties.Count));
         FireColumnsChanged();
 
@@ -804,7 +828,9 @@ public partial class WorkspaceViewModel : ViewModelBase
     {
         RawJsonText = Rows.Count > 0 && Properties.Count > 0
             ? _jsonService.SerializeToJson(Rows, Properties)
-            : Properties.Count > 0 ? "[]" : "{}";
+            : Properties.Count > 0
+                ? "[]"
+                : "{}";
         JsonEditorError = string.Empty;
         IsJsonEditorErrorVisible = false;
         IsJsonEditorMode = true;
@@ -866,12 +892,15 @@ public partial class WorkspaceViewModel : ViewModelBase
     private async Task Close()
     {
         var mainWindowViewModel = App.Current.Services.GetRequiredService<MainWindowViewModel>();
-        if(mainWindowViewModel.Workspaces.Count == 1)
+        if (mainWindowViewModel.Workspaces.Count == 1)
         {
-            await _dialogService.ShowMessageAsync(Localizer.Get("CloseWorkspaceErrorTitle"), Localizer.Get("CloseWorkspaceErrorMsg"));
+            await _dialogService.ShowMessageAsync(Localizer.Get("CloseWorkspaceErrorTitle"),
+                Localizer.Get("CloseWorkspaceErrorMsg"));
             return;
         }
-        var result = await _dialogService.ShowConfirmAsync(Localizer.Get("CloseWorkspaceTitle"), Localizer.Get("CloseWorkspaceMsg"));
+
+        var result = await _dialogService.ShowConfirmAsync(Localizer.Get("CloseWorkspaceTitle"),
+            Localizer.Get("CloseWorkspaceMsg"));
         if (result)
         {
             CloseRequested?.Invoke(this, EventArgs.Empty);
@@ -882,7 +911,8 @@ public partial class WorkspaceViewModel : ViewModelBase
     private async Task RenameAsync()
     {
         var newName = await _dialogService.ShowInputDialogAsync(
-            Localizer.Get("RenameWorkspaceTitle"), Localizer.Get("RenameWorkspacePrompt"), Header, Localizer.Get("WorkspaceNameLabel"));
+            Localizer.Get("RenameWorkspaceTitle"), Localizer.Get("RenameWorkspacePrompt"), Header,
+            Localizer.Get("WorkspaceNameLabel"));
 
         if (newName == null) return;
 

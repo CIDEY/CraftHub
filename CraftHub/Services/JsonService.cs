@@ -18,23 +18,21 @@ public class JsonService : IJsonService
         // Use an ordered dictionary so fields appear in first-seen order,
         // but we scan ALL elements to catch fields that only appear in some rows.
         var fieldDict = new Dictionary<string, JsonFieldMapping>(StringComparer.Ordinal);
-        try
-        {
-            using var doc = JsonDocument.Parse(json);
-            var root = doc.RootElement;
 
-            if (root.ValueKind == JsonValueKind.Array)
-            {
-                foreach (var element in root.EnumerateArray())
-                    if (element.ValueKind == JsonValueKind.Object)
-                        DetectFieldsRecursive(element, "", fieldDict);
-            }
-            else if (root.ValueKind == JsonValueKind.Object)
-            {
-                DetectFieldsRecursive(root, "", fieldDict);
-            }
+        using var doc = JsonDocument.Parse(json);
+        var root = doc.RootElement;
+
+        if (root.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var element in root.EnumerateArray())
+                if (element.ValueKind == JsonValueKind.Object)
+                    DetectFieldsRecursive(element, "", fieldDict);
         }
-        catch (JsonException ex) { Debug.WriteLine($"DetectFields: invalid JSON — {ex.Message}"); }
+        else if (root.ValueKind == JsonValueKind.Object)
+        {
+            DetectFieldsRecursive(root, "", fieldDict);
+        }
+
         return fieldDict.Values.ToList();
     }
 
@@ -72,6 +70,7 @@ public class JsonService : IJsonService
                 {
                     MergeFieldMapping(item, name, fieldDict);
                 }
+
                 i++;
             }
         }
@@ -120,45 +119,44 @@ public class JsonService : IJsonService
     public List<DynamicDataRow> ParseJsonData(string json, IReadOnlyList<JsonPropertyDefinition> properties)
     {
         var rows = new List<DynamicDataRow>();
-        try
+        using var doc = JsonDocument.Parse(json);
+        var root = doc.RootElement;
+
+        IEnumerable<JsonElement> elements;
+        if (root.ValueKind == JsonValueKind.Array)
+            elements = root.EnumerateArray();
+        else if (root.ValueKind == JsonValueKind.Object)
+            elements = new[] { root };
+        else
+            return rows;
+
+        foreach (var element in elements)
         {
-            using var doc = JsonDocument.Parse(json);
-            var root = doc.RootElement;
-
-            IEnumerable<JsonElement> elements;
-            if (root.ValueKind == JsonValueKind.Array)
-                elements = root.EnumerateArray();
-            else if (root.ValueKind == JsonValueKind.Object)
-                elements = new[] { root };
-            else
-                return rows;
-
-            foreach (var element in elements)
+            if (element.ValueKind != JsonValueKind.Object) continue;
+            var row = new DynamicDataRow();
+            foreach (var prop in properties)
             {
-                if (element.ValueKind != JsonValueKind.Object) continue;
-                var row = new DynamicDataRow();
-                foreach (var prop in properties)
+                string value = "";
+                var current = ResolvePath(element, prop.Name);
+
+                if (current != null)
                 {
-                    string value = "";
-                    var current = ResolvePath(element, prop.Name);
-                    
-                    if (current != null)
+                    var el = current.Value;
+                    value = el.ValueKind switch
                     {
-                        var el = current.Value;
-                        value = el.ValueKind switch
-                        {
-                            JsonValueKind.Object => el.GetRawText(),
-                            JsonValueKind.Array => el.GetRawText(),
-                            JsonValueKind.Null => "",
-                            _ => el.ToString() ?? ""
-                        };
-                    }
-                    row.InitializeProperty(prop.Name, value);
+                        JsonValueKind.Object => el.GetRawText(),
+                        JsonValueKind.Array => el.GetRawText(),
+                        JsonValueKind.Null => "",
+                        _ => el.ToString() ?? ""
+                    };
                 }
-                rows.Add(row);
+
+                row.InitializeProperty(prop.Name, value);
             }
+
+            rows.Add(row);
         }
-        catch (JsonException ex) { Debug.WriteLine($"ParseJsonData: invalid JSON — {ex.Message}"); }
+
         return rows;
     }
 
@@ -182,6 +180,7 @@ public class JsonService : IJsonService
                 if (!current.TryGetProperty(p, out current)) return null;
             }
         }
+
         return current;
     }
 
@@ -210,6 +209,7 @@ public class JsonService : IJsonService
             var val = row[prop.Name];
             SetNestedNode(rowNode, prop.Name, val, prop.FieldType);
         }
+
         return rowNode;
     }
 
@@ -243,6 +243,7 @@ public class JsonService : IJsonService
                 {
                     array[idx] = nextIsArray ? new JsonArray() : new JsonObject();
                 }
+
                 current = array[idx];
             }
             else
@@ -252,6 +253,7 @@ public class JsonService : IJsonService
                 {
                     obj[p] = nextIsArray ? new JsonArray() : new JsonObject();
                 }
+
                 current = obj[p];
             }
         }
@@ -287,13 +289,19 @@ public class JsonService : IJsonService
             case JsonFieldType.Byte when byte.TryParse(val, out var by): return by;
             case JsonFieldType.Short when short.TryParse(val, out var s): return s;
             case JsonFieldType.Object or JsonFieldType.Array:
-                try { return JsonNode.Parse(val); }
-                catch { return val; }
+                try
+                {
+                    return JsonNode.Parse(val);
+                }
+                catch
+                {
+                    return val;
+                }
             default:
                 return val;
         }
     }
-    
+
     public string SanitizeJson(string json) => SanitizeRawNewlinesInStrings(json);
 
     /// <summary>
@@ -340,12 +348,14 @@ public class JsonService : IJsonService
                     sb.Append("\\n");
                     continue;
                 }
+
                 if (c == '\r')
                 {
                     if (i + 1 >= json.Length || json[i + 1] != '\n')
                         sb.Append("\\n");
                     continue;
                 }
+
                 if (c == '\t')
                 {
                     sb.Append("\\t");

@@ -703,7 +703,7 @@ public partial class WorkspaceViewModel : ViewModelBase
             return;
         }
 
-        var filters = new List<FileFilter> { new("JSON files", new[] { "*.json" }) };
+        var filters = new List<FileFilter> { new("JSON and TXT files", new[] { "*.json", "*.txt" }) };
         var path = await _fileDialogService.SaveFileAsync("Export JSON", filters, Header);
         if (path == null) return;
 

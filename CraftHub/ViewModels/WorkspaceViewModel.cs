@@ -569,7 +569,7 @@ public partial class WorkspaceViewModel : ViewModelBase
     [RelayCommand]
     private async Task ImportJsonAsync()
     {
-        var filters = new List<FileFilter> { new("JSON files", new[] { "*.json" }) };
+        var filters = new List<FileFilter> { new("JSON and TXT files", new[] { "*.json", "*.txt" }) };
         var paths = await _fileDialogService.OpenMultipleFilesAsync(Localizer.Get("ImportJson"), filters);
         if (paths.Count == 0) return;
 

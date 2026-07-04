@@ -263,9 +263,8 @@ public partial class WorkspaceView : UserControl
             {
                 var border = new Border();
                 var mb = new MultiBinding { Converter = new SearchHighlightConverter() };
-                // Use the indexer path so the background reacts to PropertyChanged("Item[]")
-                // (e.g. after undo/redo) without needing a converter.
-                mb.Bindings.Add(new Binding($"[{prop.Name}]"));
+                // Compiled binding (not "[{name}]" string path) — tolerates any key; see issue #11.
+                mb.Bindings.Add(DynamicRowCellBinding.ForKey(prop.Name));
                 mb.Bindings.Add(new Binding("DataContext.SearchQuery")
                 {
                     RelativeSource = new RelativeSource
@@ -327,12 +326,8 @@ public partial class WorkspaceView : UserControl
                         Margin = new Avalonia.Thickness(12, 8, 12, 8)
                     };
                     // TwoWay: user click → row, undo → row → binding → checkbox
-                    cb.Bind(CheckBox.IsCheckedProperty, new Binding
-                    {
-                        Path = $"[{prop.Name}]",
-                        Mode = BindingMode.TwoWay,
-                        Converter = new DynamicRowBoolConverter()
-                    });
+                    cb.Bind(CheckBox.IsCheckedProperty,
+                        DynamicRowCellBinding.ForKey(prop.Name, BindingMode.TwoWay, new DynamicRowBoolConverter()));
 
                     // Undo tracking for bool cells (they never enter DataGrid edit mode).
                     // PointerPressed captures the old value just before the toggle; only
@@ -368,10 +363,10 @@ public partial class WorkspaceView : UserControl
                         TextTrimming = TextTrimming.CharacterEllipsis,
                         MaxLines = 3
                     };
-                    // Bind directly to the indexer path so the TextBlock reacts to
-                    // PropertyChanged("Item[]") that DynamicDataRow fires on every write,
+                    // Bind to the row indexer via a compiled binding so the TextBlock
+                    // reacts to PropertyChanged that DynamicDataRow fires on every write,
                     // including writes from EditCellAction.Undo() / .Redo().
-                    tb.Bind(TextBlockHelper.OriginalTextProperty, new Binding($"[{prop.Name}]"));
+                    tb.Bind(TextBlockHelper.OriginalTextProperty, DynamicRowCellBinding.ForKey(prop.Name));
                     tb.Bind(TextBlockHelper.HighlightTextProperty,
                         new Binding("DataContext.SearchQuery")
                         {
@@ -400,12 +395,8 @@ public partial class WorkspaceView : UserControl
                             VerticalAlignment = VerticalAlignment.Center,
                             Margin = new Avalonia.Thickness(12, 8, 12, 8)
                         };
-                        cb.Bind(CheckBox.IsCheckedProperty, new Binding
-                        {
-                            Path = $"[{prop.Name}]",
-                            Mode = BindingMode.TwoWay,
-                            Converter = new DynamicRowBoolConverter()
-                        });
+                        cb.Bind(CheckBox.IsCheckedProperty,
+                            DynamicRowCellBinding.ForKey(prop.Name, BindingMode.TwoWay, new DynamicRowBoolConverter()));
                         return cb;
                     }
                     else

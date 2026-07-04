@@ -137,12 +137,8 @@ public partial class JsonEditorView : Window
                             VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center,
                             Margin = new Avalonia.Thickness(12, 0)
                         };
-                        cb.Bind(Avalonia.Controls.CheckBox.IsCheckedProperty, new Avalonia.Data.Binding
-                        {
-                            Path = $"[{prop.Name}]",
-                            Mode = Avalonia.Data.BindingMode.TwoWay,
-                            Converter = new CraftHub.Converters.DynamicRowBoolConverter()
-                        });
+                        cb.Bind(Avalonia.Controls.CheckBox.IsCheckedProperty,
+                            DynamicRowCellBinding.ForKey(prop.Name, Avalonia.Data.BindingMode.TwoWay, new CraftHub.Converters.DynamicRowBoolConverter()));
                         border.Child = cb;
                     }
                     else
@@ -179,12 +175,8 @@ public partial class JsonEditorView : Window
                             VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center,
                             Margin = new Avalonia.Thickness(12, 0)
                         };
-                        cb.Bind(Avalonia.Controls.CheckBox.IsCheckedProperty, new Avalonia.Data.Binding
-                        {
-                            Path = $"[{prop.Name}]",
-                            Mode = Avalonia.Data.BindingMode.TwoWay,
-                            Converter = new CraftHub.Converters.DynamicRowBoolConverter()
-                        });
+                        cb.Bind(Avalonia.Controls.CheckBox.IsCheckedProperty,
+                            DynamicRowCellBinding.ForKey(prop.Name, Avalonia.Data.BindingMode.TwoWay, new CraftHub.Converters.DynamicRowBoolConverter()));
                         return cb;
                     }
                     else

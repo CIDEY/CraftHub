@@ -9,7 +9,7 @@ rm -rf ./staging_folder/
 
 # .NET publish
 # self-contained is recommended, so final users won't need to install .NET
-dotnet publish ../CraftHub/CraftHub.csproj --configuration Release --runtime linux-x64 --self-contained -f net9.0
+dotnet publish ../CraftHub/CraftHub.csproj --configuration Release --runtime linux-x64 --self-contained -f net10.0
 echo "Published"
 
 # Staging directory
@@ -31,7 +31,7 @@ echo "Started copied"
 # Other files
 mkdir -p ./staging_folder/usr/share
 mkdir -p ./staging_folder/usr/share/crafthub
-cp -f -a ../CraftHub/bin/Release/net9.0/linux-x64/publish/. ./staging_folder/usr/share/crafthub/ # copies all files from publish dir
+cp -f -a ../CraftHub/bin/Release/net10.0/linux-x64/publish/. ./staging_folder/usr/share/crafthub/ # copies all files from publish dir
 chmod -R a+rX ./staging_folder/usr/share/crafthub/ # set read permissions to all files
 chmod a+x ./staging_folder/usr/share/crafthub/CraftHub # set executable permissions to main executable
 echo "CraftHub copied"

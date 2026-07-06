@@ -8,7 +8,7 @@ rm -rf ./staging_folder_arm64/
 
 # .NET publish
 # self-contained is recommended, so final users won't need to install .NET
-dotnet publish ../CraftHub/CraftHub.csproj --configuration Release --runtime osx-arm64 --self-contained -f net9.0
+dotnet publish ../CraftHub/CraftHub.csproj --configuration Release --runtime osx-arm64 --self-contained -f net10.0
 echo "Published"
 
 # Staging directory
@@ -23,7 +23,7 @@ echo "Plist copied"
 
 # Other files
 mkdir -p ./staging_folder_arm64/CraftHub.app/Contents/MacOS
-cp -f -aL ../CraftHub/bin/Release/net9.0/osx-arm64/publish/. ./staging_folder_arm64/CraftHub.app/Contents/MacOS/ # copies all files from publish dir
+cp -f -aL ../CraftHub/bin/Release/net10.0/osx-arm64/publish/. ./staging_folder_arm64/CraftHub.app/Contents/MacOS/ # copies all files from publish dir
 chmod -R a+rX ./staging_folder_arm64/CraftHub.app/Contents/MacOS/ # set read permissions to all files
 chmod a+x ./staging_folder_arm64/CraftHub.app/Contents/MacOS/CraftHub # set executable permissions to main executable
 echo "CraftHub copied"

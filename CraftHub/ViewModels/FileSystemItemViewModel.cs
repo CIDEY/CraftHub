@@ -20,7 +20,10 @@ public partial class FileSystemItemViewModel : ObservableObject
 {
     private readonly FileExplorerViewModel _owner;
     private bool _childrenLoaded;
-
+    
+    [ObservableProperty]
+    private bool isDragOver;
+    
     /// <summary>True for the dummy child used only to render the expander arrow before lazy loading.</summary>
     private readonly bool _isPlaceholder;
 

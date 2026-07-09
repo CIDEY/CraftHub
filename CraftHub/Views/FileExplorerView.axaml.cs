@@ -95,19 +95,59 @@ public partial class FileExplorerView : UserControl
 
     private void OnTreeDragOver(object? sender, DragEventArgs e)
     {
-        e.DragEffects = ResolveDropTarget(e) is not null ? DragDropEffects.Move : DragDropEffects.None;
+        var target = ResolveDropTarget(e);
+        
+        // Сброс подсветки для всех элементов
+        if (DataContext is FileExplorerViewModel vm && vm.RootItems != null)
+        {
+            ClearDragHighlights(vm.RootItems);
+        }
+    
+        if (target != null && target.IsDirectory)
+        {
+            target.IsDragOver = true;
+            e.DragEffects = DragDropEffects.Move;
+        }
+        else
+        {
+            e.DragEffects = DragDropEffects.None;
+        }
+    
         e.Handled = true;
     }
 
     private void OnTreeDrop(object? sender, DragEventArgs e)
     {
-        if (DataContext is FileExplorerViewModel vm &&
+        // Сброс подсветки
+        if (DataContext is FileExplorerViewModel vm)
+        {
+            ClearDragHighlights(vm.RootItems);
+        }
+    
+        if (DataContext is FileExplorerViewModel viewModel &&
             e.Data.Get(FileDragFormat) is string source &&
             ResolveDropTarget(e) is { } target)
         {
-            _ = vm.MoveItemAsync(source, target);
+            _ = viewModel.MoveItemAsync(source, target);
         }
         e.Handled = true;
+    }
+
+    private void ClearDragHighlights(System.Collections.IEnumerable items)
+    {
+        if (items == null) return;
+    
+        foreach (var item in items)
+        {
+            if (item is FileSystemItemViewModel fsItem)
+            {
+                fsItem.IsDragOver = false;
+                if (fsItem.Children != null && fsItem.Children.Count > 0)
+                {
+                    ClearDragHighlights(fsItem.Children);
+                }
+            }
+        }
     }
 
     /// <summary>Finds the node under the cursor and validates it as a drop target.</summary>

@@ -45,8 +45,8 @@ public partial class FileExplorerViewModel : ViewModelBase
     public string RootName => HasRoot ? (Path.GetFileName(RootPath!.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)) is { Length: > 0 } n ? n : RootPath!) : string.Empty;
 
     /// <summary>Minimum/maximum width (px) the explorer panel column may be resized to.</summary>
-    public const double MinPanelWidth = 180;
-    public const double MaxPanelWidth = 700;
+    public const double MinPanelWidth = 220;
+    public const double MaxPanelWidth = 320;
 
     public FileExplorerViewModel(
         IFileDialogService fileDialogService,

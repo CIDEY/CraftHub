@@ -11,6 +11,8 @@
 		<KeyBinding Gesture="Ctrl+Z" Command="{Binding UndoCommand}" />
 		<KeyBinding Gesture="Ctrl+Y" Command="{Binding RedoCommand}" />
 		<KeyBinding Gesture="Ctrl+Shift+Z" Command="{Binding RedoCommand}" />
+		<KeyBinding Gesture="Ctrl+S" Command="{Binding SaveCommand}" />
+		<KeyBinding Gesture="Ctrl+Shift+S" Command="{Binding SaveAsCommand}" />
 	</UserControl.KeyBindings>
 
 	<Grid RowDefinitions="Auto,Auto,*,Auto">
@@ -18,95 +20,150 @@
 		<!-- Toolbar Row 1: Actions -->
 		<Border Grid.Row="0" Background="{DynamicResource SurfaceBackground}" Padding="8,6"
 				CornerRadius="8" Margin="8,8,8,0">
-			<StackPanel Orientation="Horizontal" Spacing="4">
-				<Button Classes="toolbar-btn" Command="{Binding ImportJsonCommand}"
-						ToolTip.Tip="{DynamicResource ImportJsonTip}">
-					<StackPanel Orientation="Horizontal" Spacing="6">
-						<materialIcons:MaterialIcon Kind="FileImportOutline" Width="16" Height="16" />
-						<TextBlock Text="{DynamicResource ImportJson}" VerticalAlignment="Center" />
-					</StackPanel>
+			<Grid x:Name="ToolbarRoot" ColumnDefinitions="*,Auto">
+				<StackPanel x:Name="ToolbarButtons" Grid.Column="0" Orientation="Horizontal" Spacing="4"
+							ClipToBounds="True">
+
+					<Button x:Name="ExplorerToggleBtn" Classes="toolbar-btn"
+							Command="{Binding $parent[Window].DataContext.FileExplorer.ToggleCommand}"
+							ToolTip.Tip="{DynamicResource ToggleFileExplorerTip}">
+						<materialIcons:MaterialIcon Kind="FileTreeOutline" Width="16" Height="16" />
+					</Button>
+
+					<Border Width="1" Background="{DynamicResource BorderLight}" Margin="6,4" />
+
+					<Button Classes="toolbar-btn" Command="{Binding SaveCommand}"
+							ToolTip.Tip="{DynamicResource SaveTip}">
+						<StackPanel Orientation="Horizontal" Spacing="6">
+							<materialIcons:MaterialIcon Kind="ContentSaveOutline" Width="16" Height="16" />
+							<TextBlock Text="{DynamicResource SaveBtn}" VerticalAlignment="Center" />
+						</StackPanel>
+					</Button>
+
+					<Border x:Name="LeadSep" Width="1" Background="{DynamicResource BorderLight}" Margin="6,4" />
+
+					<!-- Import / export buttons — individually collapse into the … menu when the toolbar is narrow -->
+					<Button x:Name="BtnImportJson" Classes="toolbar-btn" Command="{Binding ImportJsonCommand}"
+							ToolTip.Tip="{DynamicResource ImportJsonTip}">
+						<StackPanel Orientation="Horizontal" Spacing="6">
+							<materialIcons:MaterialIcon Kind="FileImportOutline" Width="16" Height="16" />
+							<TextBlock Text="{DynamicResource ImportJson}" VerticalAlignment="Center" />
+						</StackPanel>
+					</Button>
+					<Button x:Name="BtnExportJson" Classes="toolbar-btn" Command="{Binding ExportJsonCommand}"
+							ToolTip.Tip="{DynamicResource ExportJsonTip}">
+						<StackPanel Orientation="Horizontal" Spacing="6">
+							<materialIcons:MaterialIcon Kind="FileExportOutline" Width="16" Height="16" />
+							<TextBlock Text="{DynamicResource ExportJson}" VerticalAlignment="Center" />
+						</StackPanel>
+					</Button>
+					<Button x:Name="BtnImportClass" Classes="toolbar-btn" Command="{Binding ImportClassCommand}"
+							ToolTip.Tip="{DynamicResource ImportClassTip}">
+						<StackPanel Orientation="Horizontal" Spacing="6">
+							<materialIcons:MaterialIcon Kind="FileCodeOutline" Width="16" Height="16" />
+							<TextBlock Text="{DynamicResource ImportClass}" VerticalAlignment="Center" />
+						</StackPanel>
+					</Button>
+					<Button x:Name="BtnExportClass" Classes="toolbar-btn" Command="{Binding ExportClassCommand}"
+							ToolTip.Tip="{DynamicResource ExportClassTip}">
+						<StackPanel Orientation="Horizontal" Spacing="6">
+							<materialIcons:MaterialIcon Kind="FileCode" Width="16" Height="16" />
+							<TextBlock Text="{DynamicResource ExportClass}" VerticalAlignment="Center" />
+						</StackPanel>
+					</Button>
+
+					<Border x:Name="ClusterSep" Width="1" Background="{DynamicResource BorderLight}" Margin="6,4"
+							IsVisible="{Binding IsTableEditorMode}" />
+
+					<Button Classes="toolbar-btn"
+							Command="{Binding AddRowCommand}"
+							ToolTip.Tip="{DynamicResource AddRowTip}"
+							IsVisible="{Binding IsTableEditorMode}">
+						<StackPanel Orientation="Horizontal" Spacing="6">
+							<materialIcons:MaterialIcon Kind="TableRowPlusAfter" Width="16" Height="16" />
+							<TextBlock Text="{DynamicResource AddRowBtn}" VerticalAlignment="Center" />
+						</StackPanel>
+					</Button>
+
+					<Border Width="1" Background="{DynamicResource BorderLight}" Margin="6,4"
+							IsVisible="{Binding IsTableEditorMode}" />
+
+					<Button Classes="toolbar-btn"
+							Command="{Binding UndoCommand}"
+							ToolTip.Tip="{Binding UndoTooltip}"
+							IsVisible="{Binding IsTableEditorMode}">
+						<materialIcons:MaterialIcon Kind="Undo" Width="16" Height="16" />
+					</Button>
+					<Button Classes="toolbar-btn"
+							Command="{Binding RedoCommand}"
+							ToolTip.Tip="{Binding RedoTooltip}"
+							IsVisible="{Binding IsTableEditorMode}">
+						<materialIcons:MaterialIcon Kind="Redo" Width="16" Height="16" />
+					</Button>
+
+					<Border Width="1" Background="{DynamicResource BorderLight}" Margin="6,4"
+							IsVisible="{Binding IsTableEditorMode}" />
+
+					<TextBox Text="{Binding SearchQuery}" Watermark="{DynamicResource SearchWatermark}"
+							 Width="170" VerticalAlignment="Center" CornerRadius="6" FontSize="13"
+							 IsVisible="{Binding IsTableEditorMode}" />
+
+					<Border Width="1" Background="{DynamicResource BorderLight}" Margin="6,4" />
+
+					<Button Classes="toolbar-btn" Command="{Binding SwitchToJsonEditorCommand}"
+							IsVisible="{Binding IsTableEditorMode}"
+							ToolTip.Tip="{DynamicResource SwitchToJsonTip}">
+						<StackPanel Orientation="Horizontal" Spacing="6">
+							<materialIcons:MaterialIcon Kind="CodeBraces" Width="16" Height="16" />
+							<TextBlock Text="{DynamicResource SwitchToJsonBtn}" VerticalAlignment="Center" />
+						</StackPanel>
+					</Button>
+
+					<Button Classes="toolbar-btn" Command="{Binding SwitchToTableEditorCommand}"
+							IsVisible="{Binding IsJsonEditorMode}"
+							ToolTip.Tip="{DynamicResource SwitchToTableTip}">
+						<StackPanel Orientation="Horizontal" Spacing="6">
+							<materialIcons:MaterialIcon Kind="TableLarge" Width="16" Height="16" />
+							<TextBlock Text="{DynamicResource SwitchToTableBtn}" VerticalAlignment="Center" />
+						</StackPanel>
+					</Button>
+				</StackPanel>
+
+				<!-- Overflow menu — only shown when one or more buttons do not fit -->
+				<Button x:Name="OverflowButton" Grid.Column="1" Classes="toolbar-btn"
+						IsVisible="False" VerticalAlignment="Center"
+						ToolTip.Tip="{DynamicResource MoreActionsTip}">
+					<materialIcons:MaterialIcon Kind="DotsHorizontal" Width="18" Height="18" />
+					<Button.Flyout>
+						<MenuFlyout>
+							<MenuItem x:Name="MiImportJson" Header="{DynamicResource ImportJson}"
+									  IsVisible="False" Command="{Binding ImportJsonCommand}">
+								<MenuItem.Icon>
+									<materialIcons:MaterialIcon Kind="FileImportOutline" Width="16" Height="16" />
+								</MenuItem.Icon>
+							</MenuItem>
+							<MenuItem x:Name="MiExportJson" Header="{DynamicResource ExportJson}"
+									  IsVisible="False" Command="{Binding ExportJsonCommand}">
+								<MenuItem.Icon>
+									<materialIcons:MaterialIcon Kind="FileExportOutline" Width="16" Height="16" />
+								</MenuItem.Icon>
+							</MenuItem>
+							<MenuItem x:Name="MiImportClass" Header="{DynamicResource ImportClass}"
+									  IsVisible="False" Command="{Binding ImportClassCommand}">
+								<MenuItem.Icon>
+									<materialIcons:MaterialIcon Kind="FileCodeOutline" Width="16" Height="16" />
+								</MenuItem.Icon>
+							</MenuItem>
+							<MenuItem x:Name="MiExportClass" Header="{DynamicResource ExportClass}"
+									  IsVisible="False" Command="{Binding ExportClassCommand}">
+								<MenuItem.Icon>
+									<materialIcons:MaterialIcon Kind="FileCode" Width="16" Height="16" />
+								</MenuItem.Icon>
+							</MenuItem>
+						</MenuFlyout>
+					</Button.Flyout>
 				</Button>
-				<Button Classes="toolbar-btn" Command="{Binding ExportJsonCommand}"
-						ToolTip.Tip="{DynamicResource ExportJsonTip}">
-					<StackPanel Orientation="Horizontal" Spacing="6">
-						<materialIcons:MaterialIcon Kind="FileExportOutline" Width="16" Height="16" />
-						<TextBlock Text="{DynamicResource ExportJson}" VerticalAlignment="Center" />
-					</StackPanel>
-				</Button>
-
-				<Border Width="1" Background="{DynamicResource BorderLight}" Margin="6,4" />
-
-				<Button Classes="toolbar-btn" Command="{Binding ImportClassCommand}"
-						ToolTip.Tip="{DynamicResource ImportClassTip}">
-					<StackPanel Orientation="Horizontal" Spacing="6">
-						<materialIcons:MaterialIcon Kind="FileCodeOutline" Width="16" Height="16" />
-						<TextBlock Text="{DynamicResource ImportClass}" VerticalAlignment="Center" />
-					</StackPanel>
-				</Button>
-				<Button Classes="toolbar-btn" Command="{Binding ExportClassCommand}"
-						ToolTip.Tip="{DynamicResource ExportClassTip}">
-					<StackPanel Orientation="Horizontal" Spacing="6">
-						<materialIcons:MaterialIcon Kind="FileCode" Width="16" Height="16" />
-						<TextBlock Text="{DynamicResource ExportClass}" VerticalAlignment="Center" />
-					</StackPanel>
-				</Button>
-
-				<Border Width="1" Background="{DynamicResource BorderLight}" Margin="6,4"
-						IsVisible="{Binding IsTableEditorMode}" />
-
-				<Button Classes="toolbar-btn"
-						Command="{Binding AddRowCommand}"
-						ToolTip.Tip="{DynamicResource AddRowTip}"
-						IsVisible="{Binding IsTableEditorMode}">
-					<StackPanel Orientation="Horizontal" Spacing="6">
-						<materialIcons:MaterialIcon Kind="TableRowPlusAfter" Width="16" Height="16" />
-						<TextBlock Text="{DynamicResource AddRowBtn}" VerticalAlignment="Center" />
-					</StackPanel>
-				</Button>
-
-				<Border Width="1" Background="{DynamicResource BorderLight}" Margin="6,4"
-						IsVisible="{Binding IsTableEditorMode}" />
-
-				<Button Classes="toolbar-btn"
-						Command="{Binding UndoCommand}"
-						ToolTip.Tip="{Binding UndoTooltip}"
-						IsVisible="{Binding IsTableEditorMode}">
-					<materialIcons:MaterialIcon Kind="Undo" Width="16" Height="16" />
-				</Button>
-				<Button Classes="toolbar-btn"
-						Command="{Binding RedoCommand}"
-						ToolTip.Tip="{Binding RedoTooltip}"
-						IsVisible="{Binding IsTableEditorMode}">
-					<materialIcons:MaterialIcon Kind="Redo" Width="16" Height="16" />
-				</Button>
-
-				<Border Width="1" Background="{DynamicResource BorderLight}" Margin="6,4"
-						IsVisible="{Binding IsTableEditorMode}" />
-
-				<TextBox Text="{Binding SearchQuery}" Watermark="{DynamicResource SearchWatermark}"
-						 Width="170" VerticalAlignment="Center" CornerRadius="6" FontSize="13"
-						 IsVisible="{Binding IsTableEditorMode}" />
-
-				<Border Width="1" Background="{DynamicResource BorderLight}" Margin="6,4" />
-
-				<Button Classes="toolbar-btn" Command="{Binding SwitchToJsonEditorCommand}"
-						IsVisible="{Binding IsTableEditorMode}"
-						ToolTip.Tip="{DynamicResource SwitchToJsonTip}">
-					<StackPanel Orientation="Horizontal" Spacing="6">
-						<materialIcons:MaterialIcon Kind="CodeBraces" Width="16" Height="16" />
-						<TextBlock Text="{DynamicResource SwitchToJsonBtn}" VerticalAlignment="Center" />
-					</StackPanel>
-				</Button>
-
-				<Button Classes="toolbar-btn" Command="{Binding SwitchToTableEditorCommand}"
-						IsVisible="{Binding IsJsonEditorMode}"
-						ToolTip.Tip="{DynamicResource SwitchToTableTip}">
-					<StackPanel Orientation="Horizontal" Spacing="6">
-						<materialIcons:MaterialIcon Kind="TableLarge" Width="16" Height="16" />
-						<TextBlock Text="{DynamicResource SwitchToTableBtn}" VerticalAlignment="Center" />
-					</StackPanel>
-				</Button>
-			</StackPanel>
+			</Grid>
 		</Border>
 
 		<!-- Toolbar Row 2: Add Property -->

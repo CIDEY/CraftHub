@@ -73,6 +73,8 @@
 	<x:String x:Key="ToggleThemeTip">Toggle Theme</x:String>
 	<x:String x:Key="ToggleLanguageTip">Toggle Language</x:String>
 	<x:String x:Key="AddWorkspaceTip">Add new workspace</x:String>
+	<x:String x:Key="NoWorkspaceMsg">No workspace open. Create a new tab or open a file from the explorer.</x:String>
+	<x:String x:Key="NewWorkspaceBtn">New tab</x:String>
 
 	<!-- MainWindow – notification panel -->
 	<x:String x:Key="NotificationsTitle">Notifications</x:String>
@@ -155,5 +157,63 @@
 	<x:String x:Key="UpdateCancelledTitle">Cancelled</x:String>
 	<x:String x:Key="UpdateCancelledMsg">Update was cancelled by user</x:String>
 	<x:String x:Key="UpdateFailedTitle">Update Failed</x:String>
+
+	<!-- File explorer -->
+	<x:String x:Key="FileExplorerTitle">EXPLORER</x:String>
+	<x:String x:Key="ToggleFileExplorerTip">Toggle file explorer</x:String>
+	<x:String x:Key="OpenFolderTitle">Open folder</x:String>
+	<x:String x:Key="OpenFolderTip">Open folder…</x:String>
+	<x:String x:Key="OpenFolderBtn">Open folder</x:String>
+	<x:String x:Key="CloseFolderTip">Close folder</x:String>
+	<x:String x:Key="RefreshTreeTip">Refresh</x:String>
+	<x:String x:Key="CollapseAllTip">Collapse all</x:String>
+	<x:String x:Key="SearchFilesWatermark">Search files…</x:String>
+	<x:String x:Key="ClearSearchTip">Clear search</x:String>
+	<x:String x:Key="NoFolderOpened">No folder opened. Choose a project folder to browse its files.</x:String>
+	<x:String x:Key="CtxOpenFile">Open</x:String>
+	<x:String x:Key="CtxRefreshNode">Refresh</x:String>
+	<x:String x:Key="CtxRevealInExplorer">Reveal in file manager</x:String>
+	<x:String x:Key="CtxCopyPath">Copy path</x:String>
+	<x:String x:Key="PathCopiedMsg">Path copied to clipboard</x:String>
+	<x:String x:Key="FolderOpenedMsg">Folder '{0}' opened</x:String>
+	<x:String x:Key="NewFileTip">New JSON file</x:String>
+	<x:String x:Key="CtxNewFile">New file…</x:String>
+	<x:String x:Key="NewFileTitle">New file</x:String>
+	<x:String x:Key="NewFilePrompt">Enter a name for the new file.</x:String>
+	<x:String x:Key="NewFileWatermark">File name</x:String>
+	<x:String x:Key="InvalidFileNameMsg">Invalid file name.</x:String>
+	<x:String x:Key="FileExistsMsg">File '{0}' already exists.</x:String>
+
+	<!-- Save -->
+	<x:String x:Key="SaveBtn">Save</x:String>
+	<x:String x:Key="SaveTip">Save to file (Ctrl+S)</x:String>
+	<x:String x:Key="MoreActionsTip">More actions</x:String>
+	<x:String x:Key="UnsavedTip">Unsaved changes</x:String>
+	<x:String x:Key="SaveAsTitle">Save As</x:String>
+	<x:String x:Key="SavedMsg">Saved to {0}</x:String>
+	<x:String x:Key="SaveFailedMsg">Save failed: {0}</x:String>
+	<x:String x:Key="NothingToSaveMsg">Nothing to save. Add properties first.</x:String>
+	<x:String x:Key="ExternalChangeTitle">File changed on disk</x:String>
+	<x:String x:Key="ExternalChangeMsg">'{0}' was modified outside the app. Overwrite it with your changes?</x:String>
+	<x:String x:Key="CloseWorkspaceUnsavedMsg">This tab has unsaved changes. Close it and discard them?</x:String>
+	<x:String x:Key="CloseTab">Close</x:String>
+	<x:String x:Key="CloseAllTabsTip">Close all tabs</x:String>
+	<x:String x:Key="CloseAllTabsTitle">Close all tabs</x:String>
+	<x:String x:Key="CloseAllTabsMsg">Close all tabs and start with a fresh one?</x:String>
+	<x:String x:Key="CloseAllTabsUnsavedMsg">Some tabs have unsaved changes. Close all tabs and discard them?</x:String>
+
+	<!-- Explorer: delete / clipboard -->
+	<x:String x:Key="CtxCopy">Copy</x:String>
+	<x:String x:Key="DeleteItemTitle">Delete</x:String>
+	<x:String x:Key="DeleteFileMsg">Delete file '{0}'? This cannot be undone.</x:String>
+	<x:String x:Key="DeleteFolderMsg">Delete folder '{0}' and all its contents? This cannot be undone.</x:String>
+	<x:String x:Key="DeletedMsg">Deleted '{0}'</x:String>
+	<x:String x:Key="DeleteFailedMsg">Delete failed: {0}</x:String>
+	<x:String x:Key="CopiedItemMsg">'{0}' copied</x:String>
+	<x:String x:Key="CutItemMsg">'{0}' cut</x:String>
+	<x:String x:Key="PastedItemMsg">Pasted '{0}'</x:String>
+	<x:String x:Key="MovedItemMsg">Moved '{0}'</x:String>
+	<x:String x:Key="PasteFailedMsg">Paste failed: {0}</x:String>
+	<x:String x:Key="PasteIntoSelfMsg">Cannot paste a folder into itself.</x:String>
 
 </ResourceDictionary>

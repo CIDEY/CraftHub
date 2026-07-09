@@ -52,7 +52,7 @@ public class FileDialogService : IFileDialogService
         return result.Select(f => f.Path.LocalPath).ToList();
     }
 
-    public async Task<string?> SaveFileAsync(string title, IReadOnlyList<FileFilter> filters, string suggestedFileName)
+    public async Task<string?> SaveFileAsync(string title, IReadOnlyList<FileFilter> filters, string suggestedFileName, string? suggestedDirectory = null)
     {
         var sp = GetStorageProvider();
         if (sp == null) return null;
@@ -62,13 +62,55 @@ public class FileDialogService : IFileDialogService
         if (string.IsNullOrWhiteSpace(suggestedFileName))
             suggestedFileName = "newFile";
 
+        IStorageFolder? startLocation = null;
+        if (!string.IsNullOrWhiteSpace(suggestedDirectory))
+        {
+            try
+            {
+                startLocation = await sp.TryGetFolderFromPathAsync(suggestedDirectory);
+            }
+            catch
+            {
+                startLocation = null;
+            }
+        }
+
         var result = await sp.SaveFilePickerAsync(new FilePickerSaveOptions
         {
             Title = title,
             SuggestedFileName = suggestedFileName,
+            SuggestedStartLocation = startLocation,
             FileTypeChoices = avaloniaFilters
         });
 
         return result?.Path.LocalPath;
+    }
+
+    public async Task<string?> OpenFolderAsync(string title, string? startLocation = null)
+    {
+        var sp = GetStorageProvider();
+        if (sp == null) return null;
+
+        IStorageFolder? suggestedStart = null;
+        if (!string.IsNullOrWhiteSpace(startLocation))
+        {
+            try
+            {
+                suggestedStart = await sp.TryGetFolderFromPathAsync(startLocation);
+            }
+            catch
+            {
+                suggestedStart = null;
+            }
+        }
+
+        var result = await sp.OpenFolderPickerAsync(new FolderPickerOpenOptions
+        {
+            Title = title,
+            AllowMultiple = false,
+            SuggestedStartLocation = suggestedStart
+        });
+
+        return result.FirstOrDefault()?.Path.LocalPath;
     }
 }

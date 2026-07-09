@@ -1,3 +1,4 @@
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
@@ -41,6 +42,7 @@ public partial class MainWindow : Window
             {
                 oldNotifications.CollectionChanged -= OnNotificationsCollectionChanged;
             }
+            _vm.FileExplorer.PropertyChanged -= OnFileExplorerPropertyChanged;
         }
 
         _vm = DataContext as MainWindowViewModel;
@@ -51,6 +53,62 @@ public partial class MainWindow : Window
             {
                 notifications.CollectionChanged += OnNotificationsCollectionChanged;
             }
+
+            _vm.FileExplorer.PropertyChanged += OnFileExplorerPropertyChanged;
+            ApplyExplorerColumn();
+        }
+    }
+
+    //  File explorer panel width management
+    //  ColumnDefinition does not inherit DataContext, so the column width is
+    //  driven imperatively from the FileExplorer view-model state.
+
+    private ColumnDefinition? ExplorerColumn =>
+        MainContentGrid?.ColumnDefinitions.Count > 0 ? MainContentGrid.ColumnDefinitions[0] : null;
+
+    private void OnFileExplorerPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(FileExplorerViewModel.IsVisible))
+        {
+            // Preserve the width the user dragged to before collapsing the panel.
+            var col = ExplorerColumn;
+            if (_vm?.FileExplorer is { IsVisible: false } fe && col != null &&
+                col.Width.IsAbsolute && col.Width.Value > 0)
+            {
+                fe.PanelWidth = col.Width.Value;
+            }
+            ApplyExplorerColumn();
+        }
+    }
+
+    private void ApplyExplorerColumn()
+    {
+        var fe = _vm?.FileExplorer;
+        var col = ExplorerColumn;
+        if (fe == null || col == null) return;
+
+        if (fe.IsVisible)
+        {
+            col.MinWidth = FileExplorerViewModel.MinPanelWidth;
+            col.MaxWidth = FileExplorerViewModel.MaxPanelWidth;
+            var width = Math.Clamp(fe.PanelWidth, FileExplorerViewModel.MinPanelWidth, FileExplorerViewModel.MaxPanelWidth);
+            col.Width = new GridLength(width, GridUnitType.Pixel);
+        }
+        else
+        {
+            col.MinWidth = 0;
+            col.MaxWidth = double.PositiveInfinity;
+            col.Width = new GridLength(0);
+        }
+    }
+
+    private void CaptureExplorerWidth()
+    {
+        var col = ExplorerColumn;
+        if (_vm?.FileExplorer is { IsVisible: true } fe && col != null &&
+            col.Width.IsAbsolute && col.Width.Value > 0)
+        {
+            fe.PanelWidth = col.Width.Value;
         }
     }
 
@@ -119,6 +177,7 @@ public partial class MainWindow : Window
     {
         if (_isConfirmedClose) return;
 
+        CaptureExplorerWidth();
         e.Cancel = true;
 
         var dialogService = App.Current.Services.GetRequiredService<IDialogService>();

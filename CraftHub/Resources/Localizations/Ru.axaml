@@ -73,6 +73,8 @@
     <x:String x:Key="ToggleThemeTip">Сменить тему</x:String>
     <x:String x:Key="ToggleLanguageTip">Сменить язык</x:String>
     <x:String x:Key="AddWorkspaceTip">Новая вкладка</x:String>
+    <x:String x:Key="NoWorkspaceMsg">Нет открытых рабочих областей. Создайте вкладку или откройте файл из проводника.</x:String>
+    <x:String x:Key="NewWorkspaceBtn">Новая вкладка</x:String>
 
     <!-- MainWindow – notification panel -->
     <x:String x:Key="NotificationsTitle">Уведомления</x:String>
@@ -154,5 +156,63 @@
     <x:String x:Key="UpdateCancelledTitle">Отменено</x:String>
     <x:String x:Key="UpdateCancelledMsg">Обновление отменено пользователем</x:String>
     <x:String x:Key="UpdateFailedTitle">Ошибка обновления</x:String>
+
+    <!-- File explorer -->
+    <x:String x:Key="FileExplorerTitle">ПРОВОДНИК</x:String>
+    <x:String x:Key="ToggleFileExplorerTip">Показать/скрыть проводник</x:String>
+    <x:String x:Key="OpenFolderTitle">Открыть папку</x:String>
+    <x:String x:Key="OpenFolderTip">Открыть папку…</x:String>
+    <x:String x:Key="OpenFolderBtn">Открыть папку</x:String>
+    <x:String x:Key="CloseFolderTip">Закрыть папку</x:String>
+    <x:String x:Key="RefreshTreeTip">Обновить</x:String>
+    <x:String x:Key="CollapseAllTip">Свернуть всё</x:String>
+    <x:String x:Key="SearchFilesWatermark">Поиск файлов…</x:String>
+    <x:String x:Key="ClearSearchTip">Очистить поиск</x:String>
+    <x:String x:Key="NoFolderOpened">Папка не открыта. Выберите папку проекта, чтобы просматривать файлы.</x:String>
+    <x:String x:Key="CtxOpenFile">Открыть</x:String>
+    <x:String x:Key="CtxRefreshNode">Обновить</x:String>
+    <x:String x:Key="CtxRevealInExplorer">Показать в проводнике</x:String>
+    <x:String x:Key="CtxCopyPath">Копировать путь</x:String>
+    <x:String x:Key="PathCopiedMsg">Путь скопирован в буфер обмена</x:String>
+    <x:String x:Key="FolderOpenedMsg">Папка '{0}' открыта</x:String>
+    <x:String x:Key="NewFileTip">Новый JSON-файл</x:String>
+    <x:String x:Key="CtxNewFile">Новый файл…</x:String>
+    <x:String x:Key="NewFileTitle">Новый файл</x:String>
+    <x:String x:Key="NewFilePrompt">Введите имя нового файла.</x:String>
+    <x:String x:Key="NewFileWatermark">Имя файла</x:String>
+    <x:String x:Key="InvalidFileNameMsg">Недопустимое имя файла.</x:String>
+    <x:String x:Key="FileExistsMsg">Файл '{0}' уже существует.</x:String>
+
+    <!-- Save -->
+    <x:String x:Key="SaveBtn">Сохранить</x:String>
+    <x:String x:Key="SaveTip">Сохранить в файл (Ctrl+S)</x:String>
+    <x:String x:Key="MoreActionsTip">Ещё действия</x:String>
+    <x:String x:Key="UnsavedTip">Есть несохранённые изменения</x:String>
+    <x:String x:Key="SaveAsTitle">Сохранить как</x:String>
+    <x:String x:Key="SavedMsg">Сохранено в {0}</x:String>
+    <x:String x:Key="SaveFailedMsg">Ошибка сохранения: {0}</x:String>
+    <x:String x:Key="NothingToSaveMsg">Нечего сохранять. Сначала добавьте поля.</x:String>
+    <x:String x:Key="ExternalChangeTitle">Файл изменён на диске</x:String>
+    <x:String x:Key="ExternalChangeMsg">'{0}' был изменён вне приложения. Перезаписать вашими изменениями?</x:String>
+    <x:String x:Key="CloseWorkspaceUnsavedMsg">На вкладке есть несохранённые изменения. Закрыть и потерять их?</x:String>
+    <x:String x:Key="CloseTab">Закрыть</x:String>
+    <x:String x:Key="CloseAllTabsTip">Закрыть все вкладки</x:String>
+    <x:String x:Key="CloseAllTabsTitle">Закрыть все вкладки</x:String>
+    <x:String x:Key="CloseAllTabsMsg">Закрыть все вкладки и начать с новой?</x:String>
+    <x:String x:Key="CloseAllTabsUnsavedMsg">На некоторых вкладках есть несохранённые изменения. Закрыть все и потерять их?</x:String>
+
+    <!-- Explorer: delete / clipboard -->
+    <x:String x:Key="CtxCopy">Копировать</x:String>
+    <x:String x:Key="DeleteItemTitle">Удаление</x:String>
+    <x:String x:Key="DeleteFileMsg">Удалить файл '{0}'? Действие необратимо.</x:String>
+    <x:String x:Key="DeleteFolderMsg">Удалить папку '{0}' со всем содержимым? Действие необратимо.</x:String>
+    <x:String x:Key="DeletedMsg">Удалено '{0}'</x:String>
+    <x:String x:Key="DeleteFailedMsg">Не удалось удалить: {0}</x:String>
+    <x:String x:Key="CopiedItemMsg">'{0}' скопировано</x:String>
+    <x:String x:Key="CutItemMsg">'{0}' вырезано</x:String>
+    <x:String x:Key="PastedItemMsg">Вставлено '{0}'</x:String>
+    <x:String x:Key="MovedItemMsg">Перемещено '{0}'</x:String>
+    <x:String x:Key="PasteFailedMsg">Не удалось вставить: {0}</x:String>
+    <x:String x:Key="PasteIntoSelfMsg">Нельзя вставить папку саму в себя.</x:String>
 
 </ResourceDictionary>

@@ -52,28 +52,77 @@
 			</Grid>
 		</Border>
 
-		<!-- Main content: current workspace -->
-		<Border Grid.Row="1" Background="{DynamicResource SurfaceBackground}" Margin="0">
-			<ItemsControl ItemsSource="{Binding Workspaces}">
-				<ItemsControl.ItemsPanel>
-					<ItemsPanelTemplate>
-						<Panel />
-					</ItemsPanelTemplate>
-				</ItemsControl.ItemsPanel>
-				<ItemsControl.ItemTemplate>
-					<DataTemplate DataType="{x:Type vm:WorkspaceViewModel}">
-						<views:WorkspaceView IsVisible="{Binding IsActive}" />
-					</DataTemplate>
-				</ItemsControl.ItemTemplate>
-			</ItemsControl>
-		</Border>
+		<!-- Main content: file explorer + current workspace -->
+		<Grid Grid.Row="1" x:Name="MainContentGrid">
+			<Grid.ColumnDefinitions>
+				<ColumnDefinition Width="0" MinWidth="0"/>
+				<ColumnDefinition Width="Auto" />
+				<ColumnDefinition Width="*" />
+			</Grid.ColumnDefinitions>
+
+			<!-- File explorer panel -->
+			<views:FileExplorerView Grid.Column="0"
+									DataContext="{Binding FileExplorer}"
+									IsVisible="{Binding IsVisible}"/>
+
+			<GridSplitter Grid.Column="1"
+						  Width="5"
+						  Background="Transparent"
+						  ResizeDirection="Columns"
+						  ResizeBehavior="PreviousAndNext"
+						  IsVisible="{Binding FileExplorer.IsVisible}" />
+
+			<!-- Workspace content -->
+			<Border Grid.Column="2" Background="{DynamicResource SurfaceBackground}" Margin="0">
+				<Panel>
+					<ItemsControl ItemsSource="{Binding Workspaces}"
+								  IsVisible="{Binding HasWorkspaces}">
+						<ItemsControl.ItemsPanel>
+							<ItemsPanelTemplate>
+								<Panel />
+							</ItemsPanelTemplate>
+						</ItemsControl.ItemsPanel>
+						<ItemsControl.ItemTemplate>
+							<DataTemplate DataType="{x:Type vm:WorkspaceViewModel}">
+								<views:WorkspaceView IsVisible="{Binding IsActive}" />
+							</DataTemplate>
+						</ItemsControl.ItemTemplate>
+					</ItemsControl>
+
+					<!-- Empty state: no workspace tabs open -->
+					<StackPanel IsVisible="{Binding !HasWorkspaces}"
+								VerticalAlignment="Center"
+								HorizontalAlignment="Center"
+								Spacing="16"
+								Margin="24">
+						<materialIcons:MaterialIcon Kind="TableLarge"
+													Width="52" Height="52"
+													HorizontalAlignment="Center"
+													Foreground="{DynamicResource TextMuted}" />
+						<TextBlock Text="{DynamicResource NoWorkspaceMsg}"
+								   FontSize="14"
+								   TextAlignment="Center"
+								   TextWrapping="Wrap"
+								   MaxWidth="360"
+								   Foreground="{DynamicResource TextMuted}" />
+						<Button Classes="accent-btn"
+								Padding="16,8"
+								HorizontalAlignment="Center"
+								Command="{Binding AddWorkspaceCommand}"
+								Content="{DynamicResource NewWorkspaceBtn}" />
+					</StackPanel>
+				</Panel>
+			</Border>
+		</Grid>
 
 		<!-- Bottom tab bar -->
-		<Border Grid.Row="2" Background="{DynamicResource ElevatedBackground}" Padding="8,6"
+		<Border Grid.Row="2" Background="{DynamicResource ElevatedBackground}" Padding="8,8"
 				BorderBrush="{DynamicResource BorderColor}" BorderThickness="0,1,0,0">
-			<ScrollViewer HorizontalScrollBarVisibility="Visible"
-						  VerticalScrollBarVisibility="Disabled">
-				<StackPanel Orientation="Horizontal" Spacing="0" Margin="0,0,0,20">
+			<Grid ColumnDefinitions="*,Auto">
+				<ScrollViewer Grid.Column="0"
+							  HorizontalScrollBarVisibility="Auto"
+							  VerticalScrollBarVisibility="Disabled"
+							  VerticalAlignment="Center">
 					<ItemsControl ItemsSource="{Binding Workspaces}">
 						<ItemsControl.ItemsPanel>
 							<ItemsPanelTemplate>
@@ -85,19 +134,30 @@
 								<Button Classes="tab-shell"
 										Classes.tab-active="{Binding IsActive}"
 										Command="{Binding $parent[Window].DataContext.SelectWorkspaceCommand}"
-										CommandParameter="{Binding}">
+										CommandParameter="{Binding}"
+										ToolTip.Tip="{Binding FilePath}">
 									<Button.ContextMenu>
 										<ContextMenu>
 											<MenuItem Header="{DynamicResource RenameTab}"
 													  Command="{Binding RenameCommand}" />
+											<MenuItem Header="{DynamicResource CloseTab}"
+													  Command="{Binding CloseCommand}" />
 										</ContextMenu>
 									</Button.ContextMenu>
-									<Grid ColumnDefinitions="*,Auto">
-										<TextBlock Text="{Binding Header}"
+									<Grid ColumnDefinitions="Auto,*,Auto">
+										<Ellipse Grid.Column="0"
+												 Width="8" Height="8"
+												 Margin="2,0,0,0"
+												 VerticalAlignment="Center"
+												 Fill="{DynamicResource WarningColor}"
+												 IsVisible="{Binding IsModified}"
+												 ToolTip.Tip="{DynamicResource UnsavedTip}" />
+										<TextBlock Grid.Column="1"
+												   Text="{Binding Header}"
 												   VerticalAlignment="Center"
 												   Margin="6,0,0,0" />
 										<Button Classes="tab-close"
-												Grid.Column="1"
+												Grid.Column="2"
 												Content="{materialIcons:MaterialIconExt Kind=CloseThick}"
 												Margin="6,0,0,0"
 												Command="{Binding CloseCommand}" />
@@ -107,13 +167,15 @@
 							</DataTemplate>
 						</ItemsControl.ItemTemplate>
 					</ItemsControl>
+				</ScrollViewer>
 
-					<Button Classes="tab-add"
-							Content="{materialIcons:MaterialIconExt Kind=PlusThick}"
-							Command="{Binding AddWorkspaceCommand}"
-							ToolTip.Tip="{DynamicResource AddWorkspaceTip}" />
-				</StackPanel>
-			</ScrollViewer>
+				<Button Grid.Column="1"
+						Classes="tab-add"
+						VerticalAlignment="Center" Margin="10,0,0,0"
+						Content="{materialIcons:MaterialIconExt Kind=PlusThick}"
+						Command="{Binding AddWorkspaceCommand}"
+						ToolTip.Tip="{DynamicResource AddWorkspaceTip}" />
+			</Grid>
 		</Border>
 
 		<!-- Notification overlays -->

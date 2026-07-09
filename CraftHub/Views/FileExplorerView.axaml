@@ -1,0 +1,193 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+			 xmlns:vm="using:CraftHub.ViewModels"
+			 xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+			 x:Class="CraftHub.Views.FileExplorerView"
+			 x:DataType="vm:FileExplorerViewModel">
+
+	<Border Background="{DynamicResource SurfaceBackground}"
+			BorderBrush="{DynamicResource BorderColor}"
+			BorderThickness="0,0,1,0">
+		<Grid RowDefinitions="Auto,Auto,Auto,*">
+
+			<!-- Header -->
+			<Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="10,10,6,4">
+				<TextBlock Grid.Column="0"
+						   Text="{DynamicResource FileExplorerTitle}"
+						   FontSize="12"
+						   FontWeight="SemiBold"
+						   Width="80"
+						   HorizontalAlignment="Left"
+						   Foreground="{DynamicResource TextSecondary}"
+						   VerticalAlignment="Center" />
+				<StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="2">
+					<Button Classes="explorer-btn"
+							IsVisible="{Binding HasRoot}"
+							Command="{Binding NewFileCommand}"
+							ToolTip.Tip="{DynamicResource NewFileTip}">
+						<materialIcons:MaterialIcon Kind="FilePlusOutline" Width="15" Height="15" />
+					</Button>
+					<Button Classes="explorer-btn"
+							Command="{Binding CollapseAllCommand}"
+							ToolTip.Tip="{DynamicResource CollapseAllTip}">
+						<materialIcons:MaterialIcon Kind="UnfoldLessHorizontal" Width="15" Height="15" />
+					</Button>
+					<Button Classes="explorer-btn"
+							Command="{Binding RefreshCommand}"
+							ToolTip.Tip="{DynamicResource RefreshTreeTip}">
+						<materialIcons:MaterialIcon Kind="Refresh" Width="15" Height="15" />
+					</Button>
+					<Button Classes="explorer-btn"
+							Command="{Binding OpenFolderCommand}"
+							ToolTip.Tip="{DynamicResource OpenFolderTip}">
+						<materialIcons:MaterialIcon Kind="FolderOpenOutline" Width="15" Height="15" />
+					</Button>
+				</StackPanel>
+			</Grid>
+
+			<!-- Root folder name -->
+			<Border Grid.Row="1"
+					IsVisible="{Binding HasRoot}"
+					Background="{DynamicResource ElevatedBackground}"
+					Margin="8,2,8,4"
+					CornerRadius="6"
+					Padding="8,5">
+				<Grid ColumnDefinitions="Auto,*,Auto">
+					<materialIcons:MaterialIcon Grid.Column="0"
+												Kind="FolderOutline"
+												Width="15" Height="15"
+												Margin="0,0,6,0"
+												Foreground="{DynamicResource AccentPrimary}"
+												VerticalAlignment="Center" />
+					<TextBlock Grid.Column="1"
+							   Text="{Binding RootName}"
+							   FontSize="12"
+							   FontWeight="SemiBold"
+							   TextTrimming="CharacterEllipsis"
+							   ToolTip.Tip="{Binding RootPath}"
+							   Foreground="{DynamicResource TextPrimary}"
+							   VerticalAlignment="Center" />
+					<Button Grid.Column="2"
+							Classes="explorer-btn"
+							Command="{Binding CloseFolderCommand}"
+							ToolTip.Tip="{DynamicResource CloseFolderTip}">
+						<materialIcons:MaterialIcon Kind="CloseThick" Width="13" Height="13" />
+					</Button>
+				</Grid>
+			</Border>
+
+			<!-- Search -->
+			<Grid Grid.Row="2"
+				  IsVisible="{Binding HasRoot}"
+				  ColumnDefinitions="*,Auto"
+				  Margin="8,0,8,6">
+				<TextBox Grid.Column="0"
+						 Text="{Binding SearchQuery}"
+						 Watermark="{DynamicResource SearchFilesWatermark}"
+						 FontSize="12"
+						 CornerRadius="6"
+						 Padding="8,5" />
+				<Button Grid.Column="1"
+						Classes="explorer-btn"
+						Margin="2,0,0,0"
+						IsVisible="{Binding HasSearch}"
+						Command="{Binding ClearSearchCommand}"
+						ToolTip.Tip="{DynamicResource ClearSearchTip}">
+					<materialIcons:MaterialIcon Kind="Close" Width="14" Height="14" />
+				</Button>
+			</Grid>
+
+			<!-- Empty state -->
+			<StackPanel Grid.Row="3"
+						IsVisible="{Binding !HasRoot}"
+						VerticalAlignment="Center"
+						HorizontalAlignment="Center"
+						Spacing="12"
+						Margin="16">
+				<materialIcons:MaterialIcon Kind="FolderQuestionOutline"
+											Width="40" Height="40"
+											HorizontalAlignment="Center"
+											Foreground="{DynamicResource TextMuted}" />
+				<TextBlock Text="{DynamicResource NoFolderOpened}"
+						   FontSize="12"
+						   TextAlignment="Center"
+						   TextWrapping="Wrap"
+						   Foreground="{DynamicResource TextMuted}" />
+				<Button Classes="accent-btn"
+						Padding="12,6"
+						HorizontalAlignment="Center"
+						Command="{Binding OpenFolderCommand}"
+						Content="{DynamicResource OpenFolderBtn}" />
+			</StackPanel>
+
+			<!-- Tree -->
+			<TreeView Grid.Row="3"
+					  x:Name="FileTree"
+					  IsVisible="{Binding HasRoot}"
+					  ItemsSource="{Binding RootItems}"
+					  SelectedItem="{Binding SelectedItem, Mode=TwoWay}"
+					  DragDrop.AllowDrop="True"
+					  Background="Transparent"
+					  Margin="4,0,4,8">
+				<TreeView.Styles>
+					<Style Selector="TreeViewItem">
+						<Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
+					</Style>
+				</TreeView.Styles>
+				<TreeView.DataTemplates>
+					<TreeDataTemplate DataType="vm:FileSystemItemViewModel" ItemsSource="{Binding Children}">
+						<Border Background="Transparent"
+								DoubleTapped="OnItemDoubleTapped"
+								PointerPressed="OnItemPointerPressed"
+								PointerMoved="OnItemPointerMoved"
+								Padding="2,3">
+							<Border.ContextMenu>
+								<ContextMenu>
+									<MenuItem Header="{DynamicResource CtxOpenFile}"
+											  IsVisible="{Binding IsFile}"
+											  Command="{Binding OpenCommand}" />
+									<MenuItem Header="{DynamicResource CtxNewFile}"
+											  IsVisible="{Binding IsDirectory}"
+											  Command="{Binding NewFileHereCommand}" />
+									<Separator />
+									<MenuItem Header="{DynamicResource CtxCopy}"
+											  InputGesture="Ctrl+C"
+											  Command="{Binding CopyCommand}" />
+									<MenuItem Header="{DynamicResource CtxCut}"
+											  InputGesture="Ctrl+X"
+											  Command="{Binding CutCommand}" />
+									<MenuItem Header="{DynamicResource CtxPaste}"
+											  InputGesture="Ctrl+V"
+											  Command="{Binding PasteCommand}" />
+									<MenuItem Header="{DynamicResource CtxCopyPath}"
+											  Command="{Binding CopyPathCommand}" />
+									<Separator />
+									<MenuItem Header="{DynamicResource CtxRevealInExplorer}"
+											  Command="{Binding RevealCommand}" />
+									<MenuItem Header="{DynamicResource CtxRefreshNode}"
+											  IsVisible="{Binding IsDirectory}"
+											  Command="{Binding RefreshSelfCommand}" />
+									<Separator />
+									<MenuItem Header="{DynamicResource CtxDelete}"
+											  InputGesture="Delete"
+											  Command="{Binding DeleteCommand}"
+											  Foreground="{DynamicResource DangerColor}" />
+								</ContextMenu>
+							</Border.ContextMenu>
+							<StackPanel Orientation="Horizontal" Spacing="6">
+								<materialIcons:MaterialIcon Kind="{Binding IconKind}"
+															Width="16" Height="16"
+															VerticalAlignment="Center"
+															Foreground="{DynamicResource TextSecondary}" />
+								<TextBlock Text="{Binding Name}"
+										   FontSize="13"
+										   VerticalAlignment="Center"
+										   Foreground="{DynamicResource TextPrimary}" />
+							</StackPanel>
+						</Border>
+					</TreeDataTemplate>
+				</TreeView.DataTemplates>
+			</TreeView>
+		</Grid>
+	</Border>
+</UserControl>

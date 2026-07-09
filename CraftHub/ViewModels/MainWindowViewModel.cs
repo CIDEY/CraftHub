@@ -28,6 +28,8 @@ public partial class MainWindowViewModel : ViewModelBase
     private readonly IDialogService _dialogService;
     private readonly NotificationService _notificationService;
 
+    public FileExplorerViewModel FileExplorer { get; }
+
     [ObservableProperty] private WorkspaceViewModel? _selectedWorkspace;
     [ObservableProperty] private int _selectedWorkspaceIndex;
     [ObservableProperty] private bool _isNotificationManagerOpen;
@@ -43,18 +45,59 @@ public partial class MainWindowViewModel : ViewModelBase
 
     public ObservableCollection<WorkspaceViewModel> Workspaces { get; } = new();
 
+    /// <summary>False when every tab has been closed — the shell shows an empty-state placeholder.</summary>
+    public bool HasWorkspaces => Workspaces.Count > 0;
+
     public ReadOnlyObservableCollection<Notification> Notifications => _notificationService.Notifications;
     public ReadOnlyObservableCollection<Notification> ActiveNotifications => _notificationService.ActiveNotifications;
 
-    public MainWindowViewModel(IServiceProvider serviceProvider, ThemeService themeService, NotificationService notificationService, IDialogService dialogService)
+    public MainWindowViewModel(IServiceProvider serviceProvider, ThemeService themeService, NotificationService notificationService, IDialogService dialogService, FileExplorerViewModel fileExplorer)
     {
         _serviceProvider = serviceProvider;
         _notificationService = notificationService;
         _dialogService = dialogService;
+        FileExplorer = fileExplorer;
+        FileExplorer.FileOpenRequested += OnFileOpenRequested;
+        FileExplorer.NewFileRequested += OnNewFileRequested;
         ShowNotificationPopups = _notificationService.ShowPopups;
+        Workspaces.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasWorkspaces));
         themeService.SwitchTheme(themeService.CurrentTheme);
         AddWorkspace();
         CheckUpdate();
+    }
+
+    /// <summary>
+    /// Opens a file picked in the explorer inside a workspace tab: reuses the current tab
+    /// when it is empty, otherwise creates a new one. C# files load the class schema,
+    /// everything else is imported as JSON.
+    /// </summary>
+    private async void OnFileOpenRequested(string path)
+    {
+        try
+        {
+            var target = SelectedWorkspace;
+            var reuseEmpty = target is { Properties.Count: 0, Rows.Count: 0 };
+
+            if (target == null || !reuseEmpty)
+            {
+                target = TryAddWorkspace();
+                if (target == null) return; // tab limit reached (notification already shown)
+            }
+            else
+            {
+                SelectWorkspace(target);
+            }
+
+            var ext = Path.GetExtension(path).ToLowerInvariant();
+            if (ext == ".cs")
+                await target.ImportClassFromPathAsync(path);
+            else
+                await target.ImportFromPathAsync(path);
+        }
+        catch (Exception ex)
+        {
+            _notificationService.Publish(NotificationType.Error, ex.Message);
+        }
     }
     private GitHubRelease? _latestRelease;
     private void CheckUpdate()
@@ -384,10 +427,33 @@ public partial class MainWindowViewModel : ViewModelBase
         vm.Header = $"Tab {Workspaces.Count + 1}";
         vm.CloseRequested += OnWorkspaceCloseRequested;
         vm.RequestNewWorkspace = TryAddWorkspace;   // propagate so imported tabs can also multi-import
+        vm.GetProjectRoot = () => FileExplorer.RootPath;   // default Save-As folder
+        vm.FileSaved = OnWorkspaceFileSaved;               // refresh the tree after saving
         Workspaces.Add(vm);
         SelectedWorkspace = vm;
         SelectedWorkspaceIndex = Workspaces.Count - 1;
         return vm;
+    }
+
+    private void OnWorkspaceFileSaved(string path) => FileExplorer.NotifyFileSaved(path);
+
+    /// <summary>Opens a freshly created (empty) file in a workspace bound to it, without importing.</summary>
+    private void OnNewFileRequested(string path)
+    {
+        var target = SelectedWorkspace;
+        var reuseEmpty = target is { Properties.Count: 0, Rows.Count: 0 };
+
+        if (target == null || !reuseEmpty)
+        {
+            target = TryAddWorkspace();
+            if (target == null) return;
+        }
+        else
+        {
+            SelectWorkspace(target);
+        }
+
+        target.BindToNewFile(path);
     }
 
     [RelayCommand]
@@ -402,16 +468,21 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private void OnWorkspaceCloseRequested(object? sender, EventArgs e)
     {
-        if (sender is WorkspaceViewModel vm && Workspaces.Count > 1)
+        if (sender is not WorkspaceViewModel vm || !Workspaces.Contains(vm)) return;
+
+        var idx = Workspaces.IndexOf(vm);
+        vm.CloseRequested -= OnWorkspaceCloseRequested;
+        Workspaces.Remove(vm);
+
+        if (Workspaces.Count == 0)
         {
-            var idx = Workspaces.IndexOf(vm);
-            vm.CloseRequested -= OnWorkspaceCloseRequested;
-            Workspaces.Remove(vm);
-            if (SelectedWorkspace == vm)
-            {
-                SelectedWorkspaceIndex = Math.Min(idx, Workspaces.Count - 1);
-                SelectedWorkspace = Workspaces[SelectedWorkspaceIndex];
-            }
+            SelectedWorkspaceIndex = -1;
+            SelectedWorkspace = null; // empty state
+        }
+        else if (SelectedWorkspace == vm)
+        {
+            SelectedWorkspaceIndex = Math.Min(idx, Workspaces.Count - 1);
+            SelectedWorkspace = Workspaces[SelectedWorkspaceIndex];
         }
     }
 

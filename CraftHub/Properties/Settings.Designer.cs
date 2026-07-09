@@ -46,5 +46,53 @@ namespace CraftHub.Properties {
                 this["CurrentLanguage"] = value;
             }
         }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string ProjectRootFolder {
+            get {
+                return ((string)(this["ProjectRootFolder"]));
+            }
+            set {
+                this["ProjectRootFolder"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool FileExplorerVisible {
+            get {
+                return ((bool)(this["FileExplorerVisible"]));
+            }
+            set {
+                this["FileExplorerVisible"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("300")]
+        public double FileExplorerWidth {
+            get {
+                return ((double)(this["FileExplorerWidth"]));
+            }
+            set {
+                this["FileExplorerWidth"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool FileExplorerJsonOnly {
+            get {
+                return ((bool)(this["FileExplorerJsonOnly"]));
+            }
+            set {
+                this["FileExplorerJsonOnly"] = value;
+            }
+        }
     }
 }

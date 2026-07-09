@@ -191,6 +191,7 @@
 	<x:String x:Key="UnsavedTip">Unsaved changes</x:String>
 	<x:String x:Key="SaveAsTitle">Save As</x:String>
 	<x:String x:Key="SavedMsg">Saved to {0}</x:String>
+	<x:String x:Key="FileRenamedMsg">File renamed to {0}</x:String>
 	<x:String x:Key="SaveFailedMsg">Save failed: {0}</x:String>
 	<x:String x:Key="NothingToSaveMsg">Nothing to save. Add properties first.</x:String>
 	<x:String x:Key="ExternalChangeTitle">File changed on disk</x:String>

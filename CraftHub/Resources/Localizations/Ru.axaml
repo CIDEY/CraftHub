@@ -190,6 +190,7 @@
     <x:String x:Key="UnsavedTip">Есть несохранённые изменения</x:String>
     <x:String x:Key="SaveAsTitle">Сохранить как</x:String>
     <x:String x:Key="SavedMsg">Сохранено в {0}</x:String>
+    <x:String x:Key="FileRenamedMsg">Файл переименован в {0}</x:String>
     <x:String x:Key="SaveFailedMsg">Ошибка сохранения: {0}</x:String>
     <x:String x:Key="NothingToSaveMsg">Нечего сохранять. Сначала добавьте поля.</x:String>
     <x:String x:Key="ExternalChangeTitle">Файл изменён на диске</x:String>

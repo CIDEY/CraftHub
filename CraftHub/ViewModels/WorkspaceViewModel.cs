@@ -1105,9 +1105,60 @@ public partial class WorkspaceViewModel : ViewModelBase
         }
 
         var trimmed = newName.Trim();
+
+        // If this tab is bound to a real file, renaming the tab renames the file on disk too.
+        if (FilePath != null && File.Exists(FilePath))
+        {
+            await RenameBoundFileAsync(trimmed);
+            return;
+        }
+
         if (trimmed == Header) return;
 
         Header = trimmed;
         NotifySuccess(Localizer.Get("WorkspaceRenamedMsg", Header));
+    }
+
+    /// <summary>Renames the bound file on disk (keeping its extension unless the user typed one).</summary>
+    private async Task RenameBoundFileAsync(string newName)
+    {
+        var directory = Path.GetDirectoryName(FilePath)!;
+        var targetName = Path.HasExtension(newName)
+            ? newName
+            : newName + Path.GetExtension(FilePath);
+
+        if (targetName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+        {
+            NotifyError(Localizer.Get("InvalidFileNameMsg"));
+            return;
+        }
+
+        var newPath = Path.Combine(directory, targetName);
+
+        // No change (same name) — nothing to do.
+        if (string.Equals(Path.GetFullPath(newPath), Path.GetFullPath(FilePath!), StringComparison.OrdinalIgnoreCase))
+            return;
+
+        if (File.Exists(newPath) || Directory.Exists(newPath))
+        {
+            NotifyError(Localizer.Get("FileExistsMsg", targetName));
+            return;
+        }
+
+        try
+        {
+            File.Move(FilePath!, newPath);
+        }
+        catch (Exception ex)
+        {
+            NotifyError(Localizer.Get("SaveFailedMsg", ex.Message));
+            return;
+        }
+
+        FilePath = newPath;
+        _fileWriteTimeUtc = SafeGetWriteTime(newPath);
+        Header = Path.GetFileNameWithoutExtension(newPath);
+        FileSaved?.Invoke(newPath); // refresh the explorer tree
+        NotifySuccess(Localizer.Get("FileRenamedMsg", targetName));
     }
 }

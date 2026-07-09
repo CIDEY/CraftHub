@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CraftHub.Core;
@@ -10,6 +11,12 @@ public sealed partial class UndoRedoService : ObservableObject
 
     private readonly LinkedList<IUndoableAction> _undo = new();
     private readonly Stack<IUndoableAction> _redo = new();
+
+    /// <summary>
+    /// Raised whenever the data state changes through an action (Push / Undo / Redo).
+    /// Used by the workspace to flag unsaved changes. Not raised by <see cref="Clear"/>.
+    /// </summary>
+    public event Action? StateChanged;
 
     [ObservableProperty]
     private bool _canUndo;
@@ -37,6 +44,7 @@ public sealed partial class UndoRedoService : ObservableObject
 
         _redo.Clear();
         UpdateProperties();
+        StateChanged?.Invoke();
     }
 
     public void Undo()
@@ -47,6 +55,7 @@ public sealed partial class UndoRedoService : ObservableObject
         action.Undo();
         _redo.Push(action);
         UpdateProperties();
+        StateChanged?.Invoke();
     }
 
     public void Redo()
@@ -56,6 +65,7 @@ public sealed partial class UndoRedoService : ObservableObject
         action.Redo();
         _undo.AddLast(action);
         UpdateProperties();
+        StateChanged?.Invoke();
     }
 
     /// <summary>Clear both stacks (e.g. after a destructive import).</summary>

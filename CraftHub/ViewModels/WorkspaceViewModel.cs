@@ -13,6 +13,8 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
+using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -30,6 +32,52 @@ public partial class WorkspaceViewModel : ViewModelBase
     private readonly NotificationService _notificationService;
 
     [ObservableProperty] private string _header = "Tab";
+
+    /// <summary>Absolute path of the file this tab is bound to, or null for an unsaved tab.</summary>
+    [ObservableProperty] private string? _filePath;
+
+    /// <summary>True when the tab has edits not yet written to <see cref="FilePath"/>.</summary>
+    [ObservableProperty] private bool _isModified;
+
+    /// <summary>Last known on-disk modification time, used to detect external changes.</summary>
+    private DateTime? _fileWriteTimeUtc;
+
+    /// <summary>Suppresses dirty-tracking while data is being (re)loaded from disk.</summary>
+    private bool _isLoading;
+
+    /// <summary>Supplies the current file-explorer root, used as the default Save-As folder.</summary>
+    public Func<string?>? GetProjectRoot { get; set; }
+
+    /// <summary>Notifies the shell that a file was written to the given path (to refresh the tree).</summary>
+    public Action<string>? FileSaved { get; set; }
+
+    partial void OnRawJsonTextChanged(string value)
+    {
+        if (IsJsonEditorMode && !_isLoading) MarkDirty();
+    }
+
+    private void MarkDirty()
+    {
+        if (!_isLoading) IsModified = true;
+    }
+
+    private void OnRowValueChanged(object? sender, PropertyChangedEventArgs e) => MarkDirty();
+
+    /// <summary>Binds this (empty) tab to a newly created file without importing anything.</summary>
+    public void BindToNewFile(string path)
+    {
+        FilePath = path;
+        Header = Path.GetFileNameWithoutExtension(path);
+        _fileWriteTimeUtc = SafeGetWriteTime(path);
+        IsModified = false;
+    }
+
+    private static DateTime? SafeGetWriteTime(string path)
+    {
+        try { return File.Exists(path) ? File.GetLastWriteTimeUtc(path) : null; }
+        catch { return null; }
+    }
+
     [ObservableProperty] private string _propertyName = string.Empty;
     [ObservableProperty] private JsonFieldType _selectedType = JsonFieldType.String;
     [ObservableProperty] private DynamicDataRow? _selectedRow;
@@ -156,12 +204,11 @@ public partial class WorkspaceViewModel : ViewModelBase
         _dialogService = dialogService;
         _notificationService = notificationService;
 
-        Rows.CollectionChanged += (_, _) =>
-        {
-            OnPropertyChanged(nameof(TotalRows));
-            UpdateDataSize();
-        };
-        Properties.CollectionChanged += (_, _) => UpdateDataSize();
+        Rows.CollectionChanged += OnRowsCollectionChanged;
+        Properties.CollectionChanged += OnPropertiesCollectionChanged;
+
+        // Any undoable data change (add / remove / undo / redo) flags the tab as modified.
+        UndoRedo.StateChanged += MarkDirty;
 
         // Keep Undo/Redo buttons and tooltips in sync
         UndoRedo.PropertyChanged += (_, e) =>
@@ -196,6 +243,38 @@ public partial class WorkspaceViewModel : ViewModelBase
     // -----------------------------------------------------------------------
     //  Data size
     // -----------------------------------------------------------------------
+
+    // Track row/property changes both to update the status bar and to flag unsaved edits.
+    // Per-row PropertyChanged catches in-cell text edits as the user types (before the
+    // DataGrid commits an undo action), so the "modified" marker appears immediately.
+    private void OnRowsCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        OnPropertyChanged(nameof(TotalRows));
+        UpdateDataSize();
+
+        if (e.OldItems != null)
+            foreach (DynamicDataRow row in e.OldItems)
+                row.PropertyChanged -= OnRowValueChanged;
+
+        if (e.NewItems != null)
+            foreach (DynamicDataRow row in e.NewItems)
+                row.PropertyChanged += OnRowValueChanged;
+
+        if (e.Action == NotifyCollectionChangedAction.Reset)
+            foreach (var row in Rows)
+            {
+                row.PropertyChanged -= OnRowValueChanged;
+                row.PropertyChanged += OnRowValueChanged;
+            }
+
+        MarkDirty();
+    }
+
+    private void OnPropertiesCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        UpdateDataSize();
+        MarkDirty();
+    }
 
     private void UpdateDataSize()
     {
@@ -599,6 +678,7 @@ public partial class WorkspaceViewModel : ViewModelBase
     /// </summary>
     public async Task<bool> ImportFromPathAsync(string path)
     {
+        _isLoading = true;
         try
         {
             if (Properties.Count > 0 || Rows.Count > 0)
@@ -681,6 +761,11 @@ public partial class WorkspaceViewModel : ViewModelBase
             if (IsJsonEditorMode)
                 RawJsonText = _jsonService.SerializeToJson(Rows, Properties);
 
+            // Bind this tab to the source file so Ctrl+S writes back to it.
+            FilePath = path;
+            _fileWriteTimeUtc = SafeGetWriteTime(path);
+            IsModified = false;
+
             return true;
         }
         catch (JsonException ex)
@@ -691,6 +776,10 @@ public partial class WorkspaceViewModel : ViewModelBase
             var msg = $"{Localizer.Get("InvalidJsonMsg")}{location}\n\n{ex.Message}";
             await _dialogService.ShowMessageAsync(Localizer.Get("ImportTitle"), msg);
             return false;
+        }
+        finally
+        {
+            _isLoading = false;
         }
     }
 
@@ -710,6 +799,100 @@ public partial class WorkspaceViewModel : ViewModelBase
         var json = _jsonService.SerializeToJson(Rows, Properties);
         await File.WriteAllTextAsync(path, json, Encoding.UTF8);
         NotifySuccess(Localizer.Get("ExportedMsg", Path.GetFileName(path)));
+    }
+    
+    //  Save / Save As  (write back to the bound file)
+
+    /// <summary>Ctrl+S: write to the bound file, or fall back to Save As for an unbound tab.</summary>
+    [RelayCommand]
+    private async Task SaveAsync()
+    {
+        if (FilePath == null || !File.Exists(FilePath))
+        {
+            await SaveAsAsync();
+            return;
+        }
+
+        if (!TryBuildSaveContent(out var content)) return;
+
+        // Warn if the file was changed on disk since we last loaded or saved it.
+        var current = SafeGetWriteTime(FilePath);
+        if (_fileWriteTimeUtc.HasValue && current.HasValue &&
+            current.Value > _fileWriteTimeUtc.Value.AddSeconds(1))
+        {
+            var overwrite = await _dialogService.ShowConfirmAsync(
+                Localizer.Get("ExternalChangeTitle"),
+                Localizer.Get("ExternalChangeMsg", Path.GetFileName(FilePath)));
+            if (!overwrite) return;
+        }
+
+        await WriteToFileAsync(FilePath, content);
+    }
+
+    /// <summary>Ctrl+Shift+S: pick a path (defaulting to the explorer folder) and bind the tab to it.</summary>
+    [RelayCommand]
+    private async Task SaveAsAsync()
+    {
+        if (!TryBuildSaveContent(out var content)) return;
+
+        var filters = new List<FileFilter> { new("JSON and TXT files", new[] { "*.json", "*.txt" }) };
+        var suggestedName = FilePath != null
+            ? Path.GetFileName(FilePath)
+            : (string.IsNullOrWhiteSpace(Header) ? "data" : Header) + ".json";
+        var directory = GetProjectRoot?.Invoke();
+
+        var path = await _fileDialogService.SaveFileAsync(Localizer.Get("SaveAsTitle"), filters, suggestedName, directory);
+        if (path == null) return;
+
+        await WriteToFileAsync(path, content);
+    }
+
+    private async Task WriteToFileAsync(string path, string content)
+    {
+        try
+        {
+            await File.WriteAllTextAsync(path, content, Encoding.UTF8);
+            FilePath = path;
+            Header = Path.GetFileNameWithoutExtension(path);
+            _fileWriteTimeUtc = SafeGetWriteTime(path);
+            IsModified = false;
+            NotifySuccess(Localizer.Get("SavedMsg", Path.GetFileName(path)));
+            FileSaved?.Invoke(path);
+        }
+        catch (Exception ex)
+        {
+            NotifyError(Localizer.Get("SaveFailedMsg", ex.Message));
+        }
+    }
+
+    /// <summary>Builds the JSON text to persist, validating raw text when in JSON-editor mode.</summary>
+    private bool TryBuildSaveContent(out string content)
+    {
+        content = string.Empty;
+
+        if (IsJsonEditorMode)
+        {
+            try
+            {
+                JsonDocument.Parse(RawJsonText);
+            }
+            catch (JsonException ex)
+            {
+                NotifyError($"{Localizer.Get("InvalidJsonError")}: {ex.Message}");
+                return false;
+            }
+            content = RawJsonText;
+            return true;
+        }
+
+        if (Properties.Count == 0)
+        {
+            NotifyWarning(Localizer.Get("NothingToSaveMsg"));
+            return false;
+        }
+
+        content = _jsonService.SerializeToJson(Rows, Properties);
+        return true;
     }
 
     [RelayCommand]
@@ -787,14 +970,22 @@ public partial class WorkspaceViewModel : ViewModelBase
             return false;
         }
 
-        Properties.Clear();
-        Properties.AddRange(parsedProps);
+        _isLoading = true;
+        try
+        {
+            Properties.Clear();
+            Properties.AddRange(parsedProps);
 
-        Rows.Clear();
-        Header = className;
-        UndoRedo.Clear(); // destructive — clear history
-        NotifySuccess(Localizer.Get("ImportedClassMsg", className, Properties.Count));
-        FireColumnsChanged();
+            Rows.Clear();
+            Header = className;
+            UndoRedo.Clear(); // destructive — clear history
+            NotifySuccess(Localizer.Get("ImportedClassMsg", className, Properties.Count));
+            FireColumnsChanged();
+        }
+        finally
+        {
+            _isLoading = false;
+        }
 
         return true;
     }
@@ -873,6 +1064,7 @@ public partial class WorkspaceViewModel : ViewModelBase
             IsJsonEditorErrorVisible = false;
             JsonEditorErrorLine = -1;
             IsJsonEditorMode = false;
+            MarkDirty();
             FireColumnsChanged();
             NotifySuccess(Localizer.Get("JsonAppliedMsg"));
         }
@@ -884,23 +1076,13 @@ public partial class WorkspaceViewModel : ViewModelBase
         }
     }
 
-    // -----------------------------------------------------------------------
     //  Other commands
-    // -----------------------------------------------------------------------
 
     [RelayCommand]
     private async Task Close()
     {
-        var mainWindowViewModel = App.Current.Services.GetRequiredService<MainWindowViewModel>();
-        if (mainWindowViewModel.Workspaces.Count == 1)
-        {
-            await _dialogService.ShowMessageAsync(Localizer.Get("CloseWorkspaceErrorTitle"),
-                Localizer.Get("CloseWorkspaceErrorMsg"));
-            return;
-        }
-
         var result = await _dialogService.ShowConfirmAsync(Localizer.Get("CloseWorkspaceTitle"),
-            Localizer.Get("CloseWorkspaceMsg"));
+            IsModified ? Localizer.Get("CloseWorkspaceUnsavedMsg") : Localizer.Get("CloseWorkspaceMsg"));
         if (result)
         {
             CloseRequested?.Invoke(this, EventArgs.Empty);
@@ -923,9 +1105,60 @@ public partial class WorkspaceViewModel : ViewModelBase
         }
 
         var trimmed = newName.Trim();
+
+        // If this tab is bound to a real file, renaming the tab renames the file on disk too.
+        if (FilePath != null && File.Exists(FilePath))
+        {
+            await RenameBoundFileAsync(trimmed);
+            return;
+        }
+
         if (trimmed == Header) return;
 
         Header = trimmed;
         NotifySuccess(Localizer.Get("WorkspaceRenamedMsg", Header));
+    }
+
+    /// <summary>Renames the bound file on disk (keeping its extension unless the user typed one).</summary>
+    private async Task RenameBoundFileAsync(string newName)
+    {
+        var directory = Path.GetDirectoryName(FilePath)!;
+        var targetName = Path.HasExtension(newName)
+            ? newName
+            : newName + Path.GetExtension(FilePath);
+
+        if (targetName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+        {
+            NotifyError(Localizer.Get("InvalidFileNameMsg"));
+            return;
+        }
+
+        var newPath = Path.Combine(directory, targetName);
+
+        // No change (same name) — nothing to do.
+        if (string.Equals(Path.GetFullPath(newPath), Path.GetFullPath(FilePath!), StringComparison.OrdinalIgnoreCase))
+            return;
+
+        if (File.Exists(newPath) || Directory.Exists(newPath))
+        {
+            NotifyError(Localizer.Get("FileExistsMsg", targetName));
+            return;
+        }
+
+        try
+        {
+            File.Move(FilePath!, newPath);
+        }
+        catch (Exception ex)
+        {
+            NotifyError(Localizer.Get("SaveFailedMsg", ex.Message));
+            return;
+        }
+
+        FilePath = newPath;
+        _fileWriteTimeUtc = SafeGetWriteTime(newPath);
+        Header = Path.GetFileNameWithoutExtension(newPath);
+        FileSaved?.Invoke(newPath); // refresh the explorer tree
+        NotifySuccess(Localizer.Get("FileRenamedMsg", targetName));
     }
 }

@@ -14,6 +14,7 @@ namespace CraftHub.Services.ServicesCollectionExtension
         public static void AddViewModels(this IServiceCollection services)
         {
             services.AddSingleton<MainWindowViewModel>();
+            services.AddSingleton<FileExplorerViewModel>();
             services.AddTransient<WorkspaceViewModel>();
         }
 

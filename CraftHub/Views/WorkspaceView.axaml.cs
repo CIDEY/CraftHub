@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Specialized;
+using System.ComponentModel;
 using System.Linq;
 using System.Threading.Tasks;
 using Avalonia;
@@ -50,6 +51,9 @@ public partial class WorkspaceView : UserControl
         };
         InitJsonEditor();
 
+        // Recompute toolbar overflow when the toolbar is resized.
+        ToolbarRoot.SizeChanged += (_, _) => ScheduleOverflowUpdate();
+
         // Refresh clipboard state each time the context menu is about to open
         // so Paste is enabled/disabled correctly before the user sees the menu.
         var ctx = DataGrid.ContextMenu;
@@ -61,9 +65,7 @@ public partial class WorkspaceView : UserControl
             };
     }
 
-    // -----------------------------------------------------------------------
     //  JSON editor — line numbers + scroll sync
-    // -----------------------------------------------------------------------
 
     private void InitJsonEditor()
     {
@@ -140,16 +142,12 @@ public partial class WorkspaceView : UserControl
         _lineNumbersBlock.Text = string.Join("\n", Enumerable.Range(1, count));
     }
 
-    // -----------------------------------------------------------------------
     //  Row-number header
-    // -----------------------------------------------------------------------
 
     private void OnDataGridLoadingRow(object? sender, DataGridRowEventArgs e)
         => e.Row.Header = (e.Row.Index + 1).ToString();
 
-    // -----------------------------------------------------------------------
     //  Selection → status bar
-    // -----------------------------------------------------------------------
 
     private void OnDataGridSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
@@ -157,9 +155,7 @@ public partial class WorkspaceView : UserControl
             vm.SelectedRowsCount = DataGrid.SelectedItems?.Count ?? 0;
     }
 
-    // -----------------------------------------------------------------------
     //  Cell edit tracking for undo / clipboard guard
-    // -----------------------------------------------------------------------
 
     private void SetCellEditing(bool value)
     {
@@ -184,9 +180,7 @@ public partial class WorkspaceView : UserControl
     }
 
 
-    // -----------------------------------------------------------------------
     //  DataContext / column wiring
-    // -----------------------------------------------------------------------
 
     private WorkspaceViewModel? _currentVm;
 
@@ -196,6 +190,7 @@ public partial class WorkspaceView : UserControl
         {
             _currentVm.ColumnsChanged -= OnColumnsChanged;
             _currentVm.Properties.CollectionChanged -= OnPropertiesChanged;
+            _currentVm.PropertyChanged -= OnVmPropertyChanged;
         }
 
         if (DataContext is WorkspaceViewModel vm)
@@ -203,8 +198,99 @@ public partial class WorkspaceView : UserControl
             _currentVm = vm;
             vm.ColumnsChanged += OnColumnsChanged;
             vm.Properties.CollectionChanged += OnPropertiesChanged;
+            vm.PropertyChanged += OnVmPropertyChanged;
             RebuildColumns(vm);
+            ScheduleOverflowUpdate();
         }
+    }
+
+    private void OnVmPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        // Switching between table / JSON mode changes which buttons are shown,
+        // so the overflow split must be recomputed.
+        if (e.PropertyName is nameof(WorkspaceViewModel.IsJsonEditorMode)
+            or nameof(WorkspaceViewModel.IsTableEditorMode))
+            ScheduleOverflowUpdate();
+    }
+
+    //  Responsive toolbar: move the import/export buttons that do not fit into
+    //  a "…" overflow menu, one at a time. The menu is shown only when needed.
+
+    private bool _overflowUpdateQueued;
+    private readonly System.Collections.Generic.Dictionary<Control, double> _naturalWidths = new();
+
+    private void ScheduleOverflowUpdate()
+    {
+        if (_overflowUpdateQueued) return;
+        _overflowUpdateQueued = true;
+        Dispatcher.UIThread.Post(() =>
+        {
+            _overflowUpdateQueued = false;
+            UpdateToolbarOverflow();
+        }, DispatcherPriority.Background);
+    }
+
+    private void UpdateToolbarOverflow()
+    {
+        if (ToolbarRoot == null || ToolbarButtons == null || OverflowButton == null || LeadSep == null ||
+            BtnImportJson == null || BtnExportJson == null || BtnImportClass == null || BtnExportClass == null)
+            return;
+
+        // Display order; overflow priority runs from the end (Export Class overflows first).
+        var candidates = new Button[] { BtnImportJson, BtnExportJson, BtnImportClass, BtnExportClass };
+        var menus = new MenuItem[] { MiImportJson, MiExportJson, MiImportClass, MiExportClass };
+        const double spacing = 4;
+
+        // Cache the natural width of anything currently laid out so hidden items can still be sized.
+        // DesiredSize includes margins (separators carry 6px on each side), so it is more accurate
+        // than Bounds for deciding what fits.
+        foreach (var child in ToolbarButtons.Children)
+            if (child is Control ctl && ctl.IsVisible && ctl.DesiredSize.Width > 0)
+                _naturalWidths[ctl] = ctl.DesiredSize.Width;
+        if (OverflowButton.DesiredSize.Width > 0)
+            _naturalWidths[OverflowButton] = OverflowButton.DesiredSize.Width;
+
+        double Natural(Control c) =>
+            _naturalWidths.TryGetValue(c, out var w) ? w : c.DesiredSize.Width;
+
+        var rootWidth = ToolbarRoot.Bounds.Width;
+        if (rootWidth <= 0) return;
+
+        // Total width required if every candidate were visible.
+        double total = 0;
+        foreach (var child in ToolbarButtons.Children)
+        {
+            if (child is not Control ctl) continue;
+            var isCandidate = Array.IndexOf(candidates, ctl) >= 0;
+            if (!isCandidate && !ctl.IsVisible) continue; // skip mode-hidden controls
+            total += Natural(ctl) + spacing;
+        }
+
+        // Reserve room for the … button plus a small safety pad so buttons never touch it.
+        var overflowWidth = (_naturalWidths.TryGetValue(OverflowButton, out var ow) ? ow : 44) + 8;
+
+        var toHide = new System.Collections.Generic.HashSet<Control>();
+        if (total > rootWidth)
+        {
+            var available = rootWidth - overflowWidth;
+            var running = total;
+            for (var i = candidates.Length - 1; i >= 0 && running > available; i--)
+            {
+                toHide.Add(candidates[i]);
+                running -= Natural(candidates[i]) + spacing;
+            }
+        }
+
+        for (var i = 0; i < candidates.Length; i++)
+        {
+            var hide = toHide.Contains(candidates[i]);
+            candidates[i].IsVisible = !hide;
+            menus[i].IsVisible = hide;
+        }
+
+        // Hide the leading separator only when every candidate has overflowed.
+        LeadSep.IsVisible = toHide.Count < candidates.Length;
+        OverflowButton.IsVisible = toHide.Count > 0;
     }
 
     private void OnColumnsChanged(object? sender, EventArgs e)
@@ -217,9 +303,7 @@ public partial class WorkspaceView : UserControl
         if (_currentVm != null) RebuildColumns(_currentVm);
     }
 
-    // -----------------------------------------------------------------------
     //  Column builder
-    // -----------------------------------------------------------------------
 
     private void RebuildColumns(WorkspaceViewModel vm)
     {

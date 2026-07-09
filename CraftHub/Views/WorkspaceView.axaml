@@ -24,14 +24,6 @@
 				<StackPanel x:Name="ToolbarButtons" Grid.Column="0" Orientation="Horizontal" Spacing="4"
 							ClipToBounds="True">
 
-					<Button x:Name="ExplorerToggleBtn" Classes="toolbar-btn"
-							Command="{Binding $parent[Window].DataContext.FileExplorer.ToggleCommand}"
-							ToolTip.Tip="{DynamicResource ToggleFileExplorerTip}">
-						<materialIcons:MaterialIcon Kind="FileTreeOutline" Width="16" Height="16" />
-					</Button>
-
-					<Border Width="1" Background="{DynamicResource BorderLight}" Margin="6,4" />
-
 					<Button Classes="toolbar-btn" Command="{Binding SaveCommand}"
 							ToolTip.Tip="{DynamicResource SaveTip}">
 						<StackPanel Orientation="Horizontal" Spacing="6">

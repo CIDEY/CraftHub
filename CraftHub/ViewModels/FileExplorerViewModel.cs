@@ -4,6 +4,7 @@ using CraftHub.Core;
 using CraftHub.Helpers;
 using CraftHub.Models;
 using CraftHub.Services;
+using Material.Icons;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -44,6 +45,11 @@ public partial class FileExplorerViewModel : ViewModelBase
     public bool HasRoot => !string.IsNullOrEmpty(RootPath) && Directory.Exists(RootPath);
     public string RootName => HasRoot ? (Path.GetFileName(RootPath!.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)) is { Length: > 0 } n ? n : RootPath!) : string.Empty;
 
+    /// <summary>Toggle-button glyph that reflects whether the explorer panel is shown or hidden.</summary>
+    public MaterialIconKind ToggleIconKind => IsVisible
+        ? MaterialIconKind.MenuOpen // panel open — click to collapse
+        : MaterialIconKind.Menu;    // panel hidden — click to open
+
     /// <summary>Minimum/maximum width (px) the explorer panel column may be resized to.</summary>
     public const double MinPanelWidth = 220;
     public const double MaxPanelWidth = 320;
@@ -71,6 +77,7 @@ public partial class FileExplorerViewModel : ViewModelBase
     {
         Properties.Settings.Default.FileExplorerVisible = value;
         Properties.Settings.Default.Save();
+        OnPropertyChanged(nameof(ToggleIconKind));
     }
 
     partial void OnPanelWidthChanged(double value)

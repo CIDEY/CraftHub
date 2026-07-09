@@ -127,42 +127,42 @@
 							<TextBlock Text="{DynamicResource SwitchToTableBtn}" VerticalAlignment="Center" />
 						</StackPanel>
 					</Button>
+					
+					<!-- Overflow menu — only shown when one or more buttons do not fit -->
+					<Button x:Name="OverflowButton" Classes="toolbar-btn"
+					        IsVisible="False" VerticalAlignment="Center"
+					        ToolTip.Tip="{DynamicResource MoreActionsTip}">
+						<materialIcons:MaterialIcon Kind="DotsVertical" Width="18" Height="18" />
+						<Button.Flyout>
+							<MenuFlyout>
+								<MenuItem x:Name="MiImportJson" Header="{DynamicResource ImportJson}"
+								          IsVisible="False" Command="{Binding ImportJsonCommand}">
+									<MenuItem.Icon>
+										<materialIcons:MaterialIcon Kind="FileImportOutline" Width="16" Height="16" />
+									</MenuItem.Icon>
+								</MenuItem>
+								<MenuItem x:Name="MiExportJson" Header="{DynamicResource ExportJson}"
+								          IsVisible="False" Command="{Binding ExportJsonCommand}">
+									<MenuItem.Icon>
+										<materialIcons:MaterialIcon Kind="FileExportOutline" Width="16" Height="16" />
+									</MenuItem.Icon>
+								</MenuItem>
+								<MenuItem x:Name="MiImportClass" Header="{DynamicResource ImportClass}"
+								          IsVisible="False" Command="{Binding ImportClassCommand}">
+									<MenuItem.Icon>
+										<materialIcons:MaterialIcon Kind="FileCodeOutline" Width="16" Height="16" />
+									</MenuItem.Icon>
+								</MenuItem>
+								<MenuItem x:Name="MiExportClass" Header="{DynamicResource ExportClass}"
+								          IsVisible="False" Command="{Binding ExportClassCommand}">
+									<MenuItem.Icon>
+										<materialIcons:MaterialIcon Kind="FileCode" Width="16" Height="16" />
+									</MenuItem.Icon>
+								</MenuItem>
+							</MenuFlyout>
+						</Button.Flyout>
+					</Button>
 				</StackPanel>
-
-				<!-- Overflow menu — only shown when one or more buttons do not fit -->
-				<Button x:Name="OverflowButton" Grid.Column="1" Classes="toolbar-btn"
-						IsVisible="False" VerticalAlignment="Center"
-						ToolTip.Tip="{DynamicResource MoreActionsTip}">
-					<materialIcons:MaterialIcon Kind="DotsHorizontal" Width="18" Height="18" />
-					<Button.Flyout>
-						<MenuFlyout>
-							<MenuItem x:Name="MiImportJson" Header="{DynamicResource ImportJson}"
-									  IsVisible="False" Command="{Binding ImportJsonCommand}">
-								<MenuItem.Icon>
-									<materialIcons:MaterialIcon Kind="FileImportOutline" Width="16" Height="16" />
-								</MenuItem.Icon>
-							</MenuItem>
-							<MenuItem x:Name="MiExportJson" Header="{DynamicResource ExportJson}"
-									  IsVisible="False" Command="{Binding ExportJsonCommand}">
-								<MenuItem.Icon>
-									<materialIcons:MaterialIcon Kind="FileExportOutline" Width="16" Height="16" />
-								</MenuItem.Icon>
-							</MenuItem>
-							<MenuItem x:Name="MiImportClass" Header="{DynamicResource ImportClass}"
-									  IsVisible="False" Command="{Binding ImportClassCommand}">
-								<MenuItem.Icon>
-									<materialIcons:MaterialIcon Kind="FileCodeOutline" Width="16" Height="16" />
-								</MenuItem.Icon>
-							</MenuItem>
-							<MenuItem x:Name="MiExportClass" Header="{DynamicResource ExportClass}"
-									  IsVisible="False" Command="{Binding ExportClassCommand}">
-								<MenuItem.Icon>
-									<materialIcons:MaterialIcon Kind="FileCode" Width="16" Height="16" />
-								</MenuItem.Icon>
-							</MenuItem>
-						</MenuFlyout>
-					</Button.Flyout>
-				</Button>
 			</Grid>
 		</Border>
 

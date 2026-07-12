@@ -309,8 +309,10 @@ public partial class WorkspaceView : UserControl
     {
         DataGrid.Columns.Clear();
 
-        foreach (var prop in vm.Properties)
+        for (var colIndex = 0; colIndex < vm.Properties.Count; colIndex++)
         {
+            var prop = vm.Properties[colIndex];
+            var isLastColumn = colIndex == vm.Properties.Count - 1;
             var header = $"{prop.Name} ({JsonPropertyDefinition.GetTypeDisplayName(prop.FieldType)})";
 
             var column = new DataGridTemplateColumn
@@ -326,12 +328,13 @@ public partial class WorkspaceView : UserControl
                     HorizontalAlignment = HorizontalAlignment.Stretch,
                     [!ToolTip.TipProperty] = new Binding { Source = header }
                 }),
-                // SizeToCells измеряет ВСЕ строки, а не только видимые —
-                // ширина колонки фиксируется по самой широкой ячейке сразу
-                // и не меняется при горизонтальном скролле.
-                Width = DataGridLength.SizeToCells,
+                // Все колонки, кроме последней, подгоняются под содержимое (SizeToCells):
+                // ширина фиксируется по самой широкой ячейке и не меняется при скролле.
+                // Последняя колонка растягивается (*), забирая пустое пространство справа —
+                // иначе Avalonia оставляет там неактивный filler, в который нельзя расширить
+                // колонку. Так свободное место справа становится обычной изменяемой колонкой.
+                Width = isLastColumn ? new DataGridLength(1, DataGridLengthUnitType.Star) : DataGridLength.SizeToCells,
                 MinWidth = 100,
-                MaxWidth = 600,
                 IsReadOnly = false,
                 SortMemberPath = $"[{prop.Name}]",
                 CustomSortComparer = new DynamicRowComparer(prop.Name, prop.FieldType),

@@ -309,10 +309,8 @@ public partial class WorkspaceView : UserControl
     {
         DataGrid.Columns.Clear();
 
-        for (var colIndex = 0; colIndex < vm.Properties.Count; colIndex++)
+        foreach (var prop in vm.Properties)
         {
-            var prop = vm.Properties[colIndex];
-            var isLastColumn = colIndex == vm.Properties.Count - 1;
             var header = $"{prop.Name} ({JsonPropertyDefinition.GetTypeDisplayName(prop.FieldType)})";
 
             var column = new DataGridTemplateColumn
@@ -328,13 +326,15 @@ public partial class WorkspaceView : UserControl
                     HorizontalAlignment = HorizontalAlignment.Stretch,
                     [!ToolTip.TipProperty] = new Binding { Source = header }
                 }),
-                // Все колонки, кроме последней, подгоняются под содержимое (SizeToCells):
+                // Все колонки (включая последнюю) подгоняются под содержимое (SizeToCells):
                 // ширина фиксируется по самой широкой ячейке и не меняется при скролле.
-                // Последняя колонка растягивается (*), забирая пустое пространство справа —
-                // иначе Avalonia оставляет там неактивный filler, в который нельзя расширить
-                // колонку. Так свободное место справа становится обычной изменяемой колонкой.
-                Width = isLastColumn ? new DataGridLength(1, DataGridLengthUnitType.Star) : DataGridLength.SizeToCells,
+                // '*' (Star) НЕ используется — иначе последняя колонка «прилипает» к правому
+                // краю и её нельзя растянуть дальше. Без MaxWidth любую колонку можно тянуть
+                // вправо сколько угодно; когда суммарная ширина превысит окно, DataGrid
+                // покажет собственный горизонтальный скроллбар.
+                Width = DataGridLength.SizeToCells,
                 MinWidth = 100,
+                MaxWidth = double.PositiveInfinity,
                 IsReadOnly = false,
                 SortMemberPath = $"[{prop.Name}]",
                 CustomSortComparer = new DynamicRowComparer(prop.Name, prop.FieldType),

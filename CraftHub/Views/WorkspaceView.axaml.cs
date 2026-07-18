@@ -307,6 +307,11 @@ public partial class WorkspaceView : UserControl
 
     private void RebuildColumns(WorkspaceViewModel vm)
     {
+        var savedWidths = new System.Collections.Generic.Dictionary<string, DataGridLength>();
+        foreach (var col in DataGrid.Columns)
+            if (col.Tag is string tag)
+                savedWidths[tag] = col.Width;
+
         DataGrid.Columns.Clear();
 
         foreach (var prop in vm.Properties)
@@ -507,6 +512,9 @@ public partial class WorkspaceView : UserControl
             {
                 column.IsReadOnly = true;
             }
+
+            if (savedWidths.TryGetValue(prop.Name, out var savedWidth))
+                column.Width = savedWidth;
 
             DataGrid.Columns.Add(column);
         }

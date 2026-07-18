@@ -414,15 +414,20 @@ public partial class WorkspaceView : UserControl
                     cb.Bind(CheckBox.IsCheckedProperty,
                         DynamicRowCellBinding.ForKey(prop.Name, BindingMode.TwoWay, new DynamicRowBoolConverter()));
 
-                    // Undo tracking for bool cells (they never enter DataGrid edit mode).
-                    // PointerPressed captures the old value just before the toggle; only
-                    // changes triggered by that press will carry the flag into IsCheckedChanged,
-                    // so binding-driven updates (from Undo/Redo) are silently ignored.
                     var boolOldValue = row[prop.Name] == "true";
                     var boolUserInteraction = false;
 
+                    cb.AddHandler(InputElement.PointerPressedEvent, (_, _) =>
+                    {
+                        boolUserInteraction = true;
+                        boolOldValue = row[prop.Name] == "true";
+                    }, RoutingStrategies.Tunnel);
+
                     cb.IsCheckedChanged += (_, _) =>
                     {
+                        if (!boolUserInteraction) return;
+                        boolUserInteraction = false;
+
                         var newVal = cb.IsChecked == true;
                         if (newVal != boolOldValue && DataContext is WorkspaceViewModel vm2)
                             vm2.UndoRedo.Push(new EditCheckBoxCellAction(row, prop.Name, boolOldValue, newVal));

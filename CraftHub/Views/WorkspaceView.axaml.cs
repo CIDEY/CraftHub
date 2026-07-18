@@ -295,12 +295,56 @@ public partial class WorkspaceView : UserControl
 
     private void OnColumnsChanged(object? sender, EventArgs e)
     {
-        if (_currentVm != null) RebuildColumns(_currentVm);
+        // ColumnsChanged is a coarse "schema changed" signal, also fired right after an
+        // add/remove that Properties.CollectionChanged already handled incrementally.
+        // Only do the (expensive) full rebuild when the columns actually diverged from the
+        // schema — e.g. a rename or a type change that has no CollectionChanged event.
+        if (_currentVm != null && !ColumnsMatch(_currentVm))
+            RebuildColumns(_currentVm);
     }
 
     private void OnPropertiesChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
-        if (_currentVm != null) RebuildColumns(_currentVm);
+        if (_currentVm == null) return;
+
+        // Update only the affected columns so adding/removing a field does not tear down and
+        // re-create every column (which forces the whole grid to re-render and drops widths).
+        switch (e.Action)
+        {
+            case NotifyCollectionChangedAction.Add
+                when e.NewItems is { Count: 1 } added && added[0] is JsonPropertyDefinition prop:
+                DataGrid.Columns.Insert(
+                    e.NewStartingIndex >= 0 ? e.NewStartingIndex : DataGrid.Columns.Count,
+                    BuildColumn(prop));
+                break;
+
+            case NotifyCollectionChangedAction.Remove
+                when e.OldStartingIndex >= 0 && e.OldStartingIndex < DataGrid.Columns.Count:
+                DataGrid.Columns.RemoveAt(e.OldStartingIndex);
+                break;
+
+            default:
+                // Reset (bulk load), Replace, Move — structure changed too much to patch.
+                RebuildColumns(_currentVm);
+                break;
+        }
+    }
+
+    // True when the existing DataGrid columns already match the schema (same order, name and
+    // header — header carries the type), so no rebuild is needed.
+    private bool ColumnsMatch(WorkspaceViewModel vm)
+    {
+        if (DataGrid.Columns.Count != vm.Properties.Count) return false;
+        for (var i = 0; i < vm.Properties.Count; i++)
+        {
+            var prop = vm.Properties[i];
+            var col = DataGrid.Columns[i];
+            if (col.Tag as string != prop.Name) return false;
+            if (col.Header as string !=
+                $"{prop.Name} ({JsonPropertyDefinition.GetTypeDisplayName(prop.FieldType)})")
+                return false;
+        }
+        return true;
     }
 
     //  Column builder
@@ -316,6 +360,17 @@ public partial class WorkspaceView : UserControl
 
         foreach (var prop in vm.Properties)
         {
+            var column = BuildColumn(prop);
+
+            if (savedWidths.TryGetValue(prop.Name, out var savedWidth))
+                column.Width = savedWidth;
+
+            DataGrid.Columns.Add(column);
+        }
+    }
+
+    private DataGridTemplateColumn BuildColumn(JsonPropertyDefinition prop)
+    {
             var header = $"{prop.Name} ({JsonPropertyDefinition.GetTypeDisplayName(prop.FieldType)})";
 
             var column = new DataGridTemplateColumn
@@ -513,10 +568,6 @@ public partial class WorkspaceView : UserControl
                 column.IsReadOnly = true;
             }
 
-            if (savedWidths.TryGetValue(prop.Name, out var savedWidth))
-                column.Width = savedWidth;
-
-            DataGrid.Columns.Add(column);
-        }
+            return column;
     }
 }

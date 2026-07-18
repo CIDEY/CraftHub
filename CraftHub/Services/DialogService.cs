@@ -29,6 +29,18 @@ public class DialogService : IDialogService
             return desktop.MainWindow;
         return null;
     }
+    
+    private static Window? GetActiveWindow()
+    {
+        if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+        {
+            foreach (var w in desktop.Windows)
+                if (w.IsActive)
+                    return w;
+            return desktop.MainWindow;
+        }
+        return null;
+    }
 
     public async Task<List<JsonFieldMapping>?> ShowFieldMappingDialogAsync(List<JsonFieldMapping> fields, string? fileName = null)
     {
@@ -45,7 +57,7 @@ public class DialogService : IDialogService
 
     public async Task ShowMessageAsync(string title, string message)
     {
-        var window = GetMainWindow();
+        var window = GetActiveWindow();
         if (window == null) return;
 
         var msgDialog = new MessageBoxView
@@ -61,7 +73,7 @@ public class DialogService : IDialogService
 
     public async Task<bool> ShowConfirmAsync(string title, string message)
     {
-        var window = GetMainWindow();
+        var window = GetActiveWindow();
         if (window == null) return false;
 
         var msgDialog = new MessageBoxView
@@ -77,7 +89,7 @@ public class DialogService : IDialogService
 
     public async Task<string?> ShowInputDialogAsync(string title, string message, string initialValue, string? placeholder = null)
     {
-        var window = GetMainWindow();
+        var window = GetActiveWindow();
         if (window == null) return null;
 
         var dialog = new InputDialogView
@@ -94,7 +106,7 @@ public class DialogService : IDialogService
 
     public async Task<string?> ShowSelectDialogAsync(string title, string message, string fileName, List<string> options)
     {
-        var window = GetMainWindow();
+        var window = GetActiveWindow();
         if (window == null) return null;
 
         var dialog = new SelectDialogView();
@@ -120,7 +132,7 @@ public class DialogService : IDialogService
         var vm = new JsonEditorViewModel(initialJson, type, jsonService, this, _notificationService, sharedProperties);
         dialog.DataContext = vm;
 
-        return await dialog.ShowDialog<string?>(window);
+        return await dialog.ShowDialog<string?>(GetActiveWindow() ?? window);
     }
 
     public async Task<ProgressResult> ShowProgressDialogAsync(string title, Func<IProgress<UpdateProgress>, CancellationToken, Task> task)

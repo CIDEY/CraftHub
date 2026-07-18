@@ -8,6 +8,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Controls.Templates;
 using Avalonia.Data;
+using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Threading;
@@ -476,26 +477,23 @@ public partial class WorkspaceView : UserControl
                     cb.Bind(CheckBox.IsCheckedProperty,
                         DynamicRowCellBinding.ForKey(prop.Name, BindingMode.TwoWay, new DynamicRowBoolConverter()));
 
-                    // Undo tracking for bool cells (they never enter DataGrid edit mode).
-                    // PointerPressed captures the old value just before the toggle; only
-                    // changes triggered by that press will carry the flag into IsCheckedChanged,
-                    // so binding-driven updates (from Undo/Redo) are silently ignored.
-                    var boolOldValue = row[prop.Name];
+                    var boolOldValue = row[prop.Name] == "true";
                     var boolUserInteraction = false;
 
-                    cb.PointerPressed += (_, _) =>
+                    cb.AddHandler(InputElement.PointerPressedEvent, (_, _) =>
                     {
-                        boolOldValue = row[prop.Name];
                         boolUserInteraction = true;
-                    };
+                        boolOldValue = row[prop.Name] == "true";
+                    }, RoutingStrategies.Tunnel);
+
                     cb.IsCheckedChanged += (_, _) =>
                     {
                         if (!boolUserInteraction) return;
                         boolUserInteraction = false;
 
-                        var newVal = (cb.IsChecked == true) ? "true" : "false";
+                        var newVal = cb.IsChecked == true;
                         if (newVal != boolOldValue && DataContext is WorkspaceViewModel vm2)
-                            vm2.UndoRedo.Push(new EditCellAction(row, prop.Name, boolOldValue, newVal));
+                            vm2.UndoRedo.Push(new EditCheckBoxCellAction(row, prop.Name, boolOldValue, newVal));
                     };
 
                     border.Child = cb;
